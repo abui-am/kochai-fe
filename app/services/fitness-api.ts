@@ -11,6 +11,7 @@ export interface QueryResponse {
   answer: string;
   sources: string[];
   context: string;
+  confidence: string;
 }
 
 export interface ValidationError {
@@ -60,7 +61,7 @@ async function requestJson<T>(
   const url = joinUrl(baseUrl, path);
 
   const controller = new AbortController();
-  const timeoutMs = options?.timeoutMs ?? 30000;
+  const timeoutMs = options?.timeoutMs ?? 3000_000;
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
