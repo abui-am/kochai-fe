@@ -23,6 +23,11 @@ export default function Chat() {
   const [messages, setMessages] = React.useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = React.useState<string>("");
   const [isSending, setIsSending] = React.useState<boolean>(false);
+  const [loadingStep, setLoadingStep] = React.useState<number>(0);
+  const [funnyMessage, setFunnyMessage] = React.useState<string>("");
+  const [expandedReferences, setExpandedReferences] = React.useState<
+    Set<number>
+  >(new Set());
   const listRef = React.useRef<HTMLDivElement | null>(null);
 
   React.useEffect(() => {
@@ -31,6 +36,63 @@ export default function Chat() {
       behavior: "smooth",
     });
   }, [messages.length]);
+
+  // Loading step progression effect
+  React.useEffect(() => {
+    if (!isSending) {
+      setLoadingStep(0);
+      setFunnyMessage("");
+      return;
+    }
+
+    const funnyMessages = [
+      "💪 Flexing my brain muscles...",
+      "🏋️‍♀️ Lifting some mental weights...",
+      "🧠 My neurons are doing cardio...",
+      "📚 Consulting my virtual personal trainer...",
+      "🔬 Mixing science with some magic...",
+      "⚡ Charging up my knowledge batteries...",
+      "🎯 Aiming for the perfect answer...",
+      "🌟 Channeling my inner fitness guru...",
+    ];
+
+    const steps = [
+      { step: 1, delay: 0, message: "Hmm, let me think about this..." },
+      {
+        step: 2,
+        delay: 600,
+        message: "Rummaging through my fitness knowledge...",
+      },
+      {
+        step: 3,
+        delay: 1000,
+        message: "Almost there, just polishing the answer!",
+      },
+    ];
+
+    // Set initial funny message
+    setFunnyMessage(
+      funnyMessages[Math.floor(Math.random() * funnyMessages.length)]
+    );
+
+    // Rotate funny messages every 400ms
+    const messageInterval = setInterval(() => {
+      setFunnyMessage(
+        funnyMessages[Math.floor(Math.random() * funnyMessages.length)]
+      );
+    }, 400);
+
+    steps.forEach(({ step, delay, message }) => {
+      const timer = setTimeout(() => {
+        setLoadingStep(step);
+      }, delay);
+      return () => clearTimeout(timer);
+    });
+
+    return () => {
+      clearInterval(messageInterval);
+    };
+  }, [isSending]);
 
   const handleSubmit: React.FormEventHandler<HTMLFormElement> = async (
     event
@@ -45,9 +107,14 @@ export default function Chat() {
     setIsSending(true);
 
     try {
-      const response = await queryKnowledgeBase({ question: trimmed });
+      const response = await queryKnowledgeBase({
+        question: trimmed,
+      });
+
+      // Use the formatted answer from paperqa_session if available, otherwise fall back to answer
       const botText =
         response?.answer ?? "Sorry, I could not generate a response.";
+
       const botMessage: ChatMessage = {
         role: "bot",
         text: botText,
@@ -55,6 +122,7 @@ export default function Chat() {
       };
       setMessages((prev) => [...prev, botMessage]);
     } catch (error) {
+      console.error("API Error:", error);
       const botMessage: ChatMessage = {
         role: "bot",
         text: "There was an error contacting the server. Please try again.",
@@ -69,11 +137,23 @@ export default function Chat() {
     setInputValue(event.target.value);
   };
 
-  const renderBotMessage = (message: ChatMessage) => {
+  const toggleReferencesDropdown = (messageIndex: number) => {
+    setExpandedReferences((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(messageIndex)) {
+        newSet.delete(messageIndex);
+      } else {
+        newSet.add(messageIndex);
+      }
+      return newSet;
+    });
+  };
+
+  const renderBotMessage = (message: ChatMessage, messageIndex: number) => {
     if (!message.response) {
       return (
         <p
-          className="whitespace-pre-wrap text-sm leading-relaxed"
+          className="text-sm leading-relaxed [&>p]:mb-1"
           dangerouslySetInnerHTML={{
             __html: parseMarkdownToHTML(message.text),
           }}
@@ -81,66 +161,423 @@ export default function Chat() {
       );
     }
 
+    const { paperqa_session, confidence, status } = message.response;
+
+    console.log(message.text);
+    // Separate used contexts from other contexts
+    const usedContextIds = new Set(paperqa_session?.used_contexts || []);
+    const usedContexts =
+      paperqa_session?.contexts?.filter((context) =>
+        usedContextIds.has(context.id)
+      ) || [];
+    const otherContexts =
+      paperqa_session?.contexts?.filter(
+        (context) => !usedContextIds.has(context.id)
+      ) || [];
+
+    const isExpanded = expandedReferences.has(messageIndex);
+
+    // Convert citation keys to numbers for better readability
+    const processedAnswerText = convertCitationKeysToNumbers(
+      message.text,
+      paperqa_session?.contexts || [],
+      paperqa_session?.used_contexts || []
+    );
+
     return (
-      <div className="space-y-3">
+      <div className="space-y-4">
         {/* Main Answer */}
         <div
-          className="whitespace-pre-wrap text-sm leading-relaxed"
+          className="text-sm leading-relaxed [&>p]:mb-2 [&>ol]:list-decimal [&>ol]:list-outside [&>ol]:ml-4 [&>ol>li]:mb-2"
           dangerouslySetInnerHTML={{
-            __html: parseMarkdownToHTML(message.response.answer),
+            __html: parseMarkdownToHTML(processedAnswerText),
           }}
         />
 
-        {/* Confidence Indicator */}
-        {message.response.confidence && (
-          <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-            <span className="font-medium">Confidence:</span>
+        {/* Status and Confidence Indicator */}
+        <div className="flex items-center gap-3 text-xs">
+          {/* Status Indicator */}
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-gray-600 dark:text-gray-400">
+              Status:
+            </span>
             <span
               className={`px-2 py-1 rounded-full text-xs font-medium ${
-                message.response.confidence === "high"
+                status
                   ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                  : message.response.confidence === "medium"
-                  ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
                   : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
               }`}
             >
-              {message.response.confidence}
+              {status ? "Berhasil" : "Gagal"}
             </span>
           </div>
-        )}
 
-        {/* Sources */}
-        {message.response.sources && message.response.sources.length > 0 && (
-          <div className="space-y-2">
-            <h4 className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
-              Sources
-            </h4>
-            <div className="space-y-2">
-              {message.response.sources.map((source, index) => {
-                const { url, displayText } = cleanSourceUrl(source);
-
-                return (
-                  <div
-                    key={index}
-                    className="text-xs text-gray-600 dark:text-gray-400"
-                  >
-                    {url ? (
-                      <a
-                        href={url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline"
-                        title={url}
-                      >
-                        {displayText || formatDoiUrl(url)}
-                      </a>
-                    ) : (
-                      <span>{displayText}</span>
-                    )}
-                  </div>
-                );
-              })}
+          {/* Confidence Indicator */}
+          {confidence && (
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-gray-600 dark:text-gray-400">
+                Tingkat Kepercayaan:
+              </span>
+              <span
+                className={`px-2 py-1 rounded-full text-xs font-medium ${
+                  confidence === "very_high"
+                    ? "bg-emerald-200 text-emerald-900 dark:bg-emerald-900/30 dark:text-emerald-300"
+                    : confidence === "high"
+                    ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                    : confidence === "medium"
+                    ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+                    : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                }`}
+              >
+                {confidence === "very_high"
+                  ? "Sangat Tinggi"
+                  : confidence === "high"
+                  ? "Tinggi"
+                  : confidence === "medium"
+                  ? "Sedang"
+                  : "Rendah"}
+              </span>
             </div>
+          )}
+        </div>
+
+        {/* Scientific References */}
+        {(usedContexts.length > 0 || otherContexts.length > 0) && (
+          <div className="space-y-3">
+            <h4 className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+              Referensi Ilmiah
+            </h4>
+
+            {/* Used Contexts - Always visible */}
+            {usedContexts.length > 0 && (
+              <div className="space-y-3">
+                <div className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                  Referensi Utama ({usedContexts.length})
+                </div>
+                {usedContexts.map((context, index) => (
+                  <div
+                    key={context.id}
+                    className="border-l-2 border-blue-200 dark:border-blue-800 pl-3 py-3 bg-blue-50/50 dark:bg-blue-950/20 rounded-r-md"
+                  >
+                    <div className="space-y-2">
+                      {/* Reference Number and Title */}
+                      <div className="text-xs text-gray-600 dark:text-gray-400">
+                        <span className="font-medium text-blue-600 dark:text-blue-400">
+                          [{index + 1}]
+                        </span>
+                        <span className="ml-2 font-semibold">
+                          {context.text.doc.title}
+                        </span>
+                      </div>
+
+                      {/* Authors */}
+                      {context.text.doc.authors &&
+                        context.text.doc.authors.length > 0 && (
+                          <div className="text-xs text-gray-500 dark:text-gray-500">
+                            <span className="font-medium">Penulis:</span>{" "}
+                            {context.text.doc.authors.join(", ")}
+                          </div>
+                        )}
+
+                      {/* Publication Details */}
+                      <div className="text-xs text-gray-600 dark:text-gray-400">
+                        <span className="font-medium">Diterbitkan:</span>{" "}
+                        {context.text.doc.year}
+                        {context.text.doc.journal && (
+                          <span className="ml-2">
+                            <span className="font-medium">di</span>{" "}
+                            <em>{context.text.doc.journal}</em>
+                          </span>
+                        )}
+                        {context.text.doc.volume && (
+                          <span className="ml-1">
+                            Vol. {context.text.doc.volume}
+                          </span>
+                        )}
+                        {context.text.doc.issue && (
+                          <span className="ml-1">
+                            No. {context.text.doc.issue}
+                          </span>
+                        )}
+                        {context.text.doc.pages && (
+                          <span className="ml-1">
+                            hlm. {context.text.doc.pages}
+                          </span>
+                        )}
+                        {/* Show extracted page numbers from context name */}
+                        {extractPageNumbers(context.text.name) && (
+                          <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 rounded text-xs font-medium">
+                            Context: pp. {extractPageNumbers(context.text.name)}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* DOI and Links */}
+                      {context.text.doc.doi && (
+                        <div className="text-xs text-gray-600 dark:text-gray-400">
+                          <span className="font-medium">DOI:</span>
+                          <a
+                            href={context.text.doc.doi_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="ml-1 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline"
+                          >
+                            {context.text.doc.doi}
+                          </a>
+                        </div>
+                      )}
+
+                      {/* Citation Count and Quality */}
+                      <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-500">
+                        <div>
+                          <span className="font-medium">Skor Relevansi:</span>
+                          <span className="ml-1 font-semibold text-blue-600 dark:text-blue-400">
+                            {context.score}
+                          </span>
+                        </div>
+                        {context.text.doc.citation_count && (
+                          <div>
+                            <span className="font-medium">Kutipan:</span>
+                            <span className="ml-1">
+                              {context.text.doc.citation_count}
+                            </span>
+                          </div>
+                        )}
+                        {context.text.doc.source_quality && (
+                          <div>
+                            <span className="font-medium">Kualitas:</span>
+                            <span
+                              className={`ml-1 px-1 py-0.5 rounded text-xs ${
+                                context.text.doc.source_quality >= 3
+                                  ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                                  : context.text.doc.source_quality >= 2
+                                  ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+                                  : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                              }`}
+                            >
+                              {context.text.doc.source_quality >= 3
+                                ? "Tinggi"
+                                : context.text.doc.source_quality >= 2
+                                ? "Sedang"
+                                : "Rendah"}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Publisher and ISSN */}
+                      {(context.text.doc.publisher ||
+                        context.text.doc.issn) && (
+                        <div className="text-xs text-gray-500 dark:text-gray-500">
+                          {context.text.doc.publisher && (
+                            <span>
+                              <span className="font-medium">Penerbit:</span>{" "}
+                              {context.text.doc.publisher}
+                            </span>
+                          )}
+                          {context.text.doc.issn && (
+                            <span className="ml-4">
+                              <span className="font-medium">ISSN:</span>{" "}
+                              {context.text.doc.issn}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Context Content */}
+                      <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-md border-l-2 border-blue-200 dark:border-blue-700">
+                        <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Konten Konteks:
+                        </div>
+                        <div className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                          {context.context}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Other Contexts - In dropdown */}
+            {otherContexts.length > 0 && (
+              <div className="space-y-2">
+                <button
+                  onClick={() => toggleReferencesDropdown(messageIndex)}
+                  className="flex items-center gap-2 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+                  aria-expanded={isExpanded}
+                >
+                  <span>Referensi Tambahan ({otherContexts.length})</span>
+                  <svg
+                    className={`w-3 h-3 transition-transform ${
+                      isExpanded ? "rotate-180" : ""
+                    }`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </button>
+
+                {isExpanded && (
+                  <div className="space-y-3 pl-2">
+                    {otherContexts.map((context, index) => (
+                      <div
+                        key={context.id}
+                        className="border-l-2 border-gray-200 dark:border-gray-700 pl-3 py-3 bg-gray-50/50 dark:bg-gray-950/20 rounded-r-md"
+                      >
+                        <div className="space-y-2">
+                          {/* Reference Number and Title */}
+                          <div className="text-xs text-gray-600 dark:text-gray-400">
+                            <span className="font-medium text-gray-600 dark:text-gray-400">
+                              [{usedContexts.length + index + 1}]
+                            </span>
+                            <span className="ml-2 font-semibold">
+                              {context.text.doc.title}
+                            </span>
+                          </div>
+
+                          {/* Authors */}
+                          {context.text.doc.authors &&
+                            context.text.doc.authors.length > 0 && (
+                              <div className="text-xs text-gray-500 dark:text-gray-500">
+                                <span className="font-medium">Penulis:</span>{" "}
+                                {context.text.doc.authors.join(", ")}
+                              </div>
+                            )}
+
+                          {/* Publication Details */}
+                          <div className="text-xs text-gray-600 dark:text-gray-400">
+                            <span className="font-medium">Diterbitkan:</span>{" "}
+                            {context.text.doc.year}
+                            {context.text.doc.journal && (
+                              <span className="ml-2">
+                                <span className="font-medium">di</span>{" "}
+                                <em>{context.text.doc.journal}</em>
+                              </span>
+                            )}
+                            {context.text.doc.volume && (
+                              <span className="ml-1">
+                                Vol. {context.text.doc.volume}
+                              </span>
+                            )}
+                            {context.text.doc.issue && (
+                              <span className="ml-1">
+                                No. {context.text.doc.issue}
+                              </span>
+                            )}
+                            {context.text.doc.pages && (
+                              <span className="ml-1">
+                                hlm. {context.text.doc.pages}
+                              </span>
+                            )}
+                            {/* Show extracted page numbers from context name */}
+                            {extractPageNumbers(context.text.name) && (
+                              <span className="ml-2 px-2 py-1 bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400 rounded text-xs font-medium">
+                                Konteks: hlm.{" "}
+                                {extractPageNumbers(context.text.name)}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* DOI and Links */}
+                          {context.text.doc.doi && (
+                            <div className="text-xs text-gray-600 dark:text-gray-400">
+                              <span className="font-medium">DOI:</span>
+                              <a
+                                href={context.text.doc.doi_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="ml-1 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline"
+                              >
+                                {context.text.doc.doi}
+                              </a>
+                            </div>
+                          )}
+
+                          {/* Citation Count and Quality */}
+                          <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-500">
+                            <div>
+                              <span className="font-medium">
+                                Relevance Score:
+                              </span>
+                              <span className="ml-1 font-semibold text-gray-600 dark:text-gray-400">
+                                {context.score}
+                              </span>
+                            </div>
+                            {context.text.doc.citation_count && (
+                              <div>
+                                <span className="font-medium">Kutipan:</span>
+                                <span className="ml-1">
+                                  {context.text.doc.citation_count}
+                                </span>
+                              </div>
+                            )}
+                            {context.text.doc.source_quality && (
+                              <div>
+                                <span className="font-medium">Kualitas:</span>
+                                <span
+                                  className={`ml-1 px-1 py-0.5 rounded text-xs ${
+                                    context.text.doc.source_quality >= 3
+                                      ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                                      : context.text.doc.source_quality >= 2
+                                      ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+                                      : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                                  }`}
+                                >
+                                  {context.text.doc.source_quality >= 3
+                                    ? "High"
+                                    : context.text.doc.source_quality >= 2
+                                    ? "Medium"
+                                    : "Low"}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Publisher and ISSN */}
+                          {(context.text.doc.publisher ||
+                            context.text.doc.issn) && (
+                            <div className="text-xs text-gray-500 dark:text-gray-500">
+                              {context.text.doc.publisher && (
+                                <span>
+                                  <span className="font-medium">
+                                    Publisher:
+                                  </span>{" "}
+                                  {context.text.doc.publisher}
+                                </span>
+                              )}
+                              {context.text.doc.issn && (
+                                <span className="ml-4">
+                                  <span className="font-medium">ISSN:</span>{" "}
+                                  {context.text.doc.issn}
+                                </span>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Context Content */}
+                          <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-md border-l-2 border-gray-200 dark:border-gray-700">
+                            <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
+                              Context Content:
+                            </div>
+                            <div className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                              {context.context}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -183,11 +620,9 @@ export default function Chat() {
                 }
               >
                 {message.role === "user" ? (
-                  <p className="whitespace-pre-wrap text-sm leading-relaxed">
-                    {message.text}
-                  </p>
+                  <p className="text-sm leading-relaxed">{message.text}</p>
                 ) : (
-                  renderBotMessage(message)
+                  renderBotMessage(message, index)
                 )}
               </div>
             </div>
@@ -196,11 +631,26 @@ export default function Chat() {
 
         {isSending && (
           <div className="flex justify-start">
-            <div className="flex items-center gap-1 rounded-2xl bg-gray-100 px-4 py-2 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
-              <span className="h-1 w-1 animate-pulse rounded-full bg-gray-500 [animation-delay:0ms]" />
-              <span className="h-1 w-1 animate-pulse rounded-full bg-gray-500 [animation-delay:150ms]" />
-              <span className="h-1 w-1 animate-pulse rounded-full bg-gray-500 [animation-delay:300ms]" />
-              <span className="sr-only">Bot is typing</span>
+            <div className="max-w-[90%] rounded-2xl bg-gray-100 px-4 py-3 text-gray-900 dark:bg-gray-900 dark:text-gray-100 flex gap-3">
+              <div className="space-y-3">
+                {/* Funny Messages */}
+                {funnyMessage && (
+                  <div className="flex items-center justify-center py-1">
+                    <div className="text-xs text-gray-500 dark:text-gray-400 animate-pulse">
+                      {funnyMessage}
+                    </div>
+                  </div>
+                )}
+
+                {/* Animated Dots for Visual Appeal */}
+                <div className="flex items-center justify-center gap-1">
+                  <span className="h-1 w-1 animate-pulse rounded-full bg-blue-500 [animation-delay:0ms]" />
+                  <span className="h-1 w-1 animate-pulse rounded-full bg-blue-500 [animation-delay:150ms]" />
+                  <span className="h-1 w-1 animate-pulse rounded-full bg-blue-500 [animation-delay:300ms]" />
+                  <span className="ml-2 text-xs text-gray-400">💭</span>
+                  <span className="sr-only">Processing your request</span>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -231,44 +681,69 @@ export default function Chat() {
   );
 }
 
-export function parseMarkdownToHTML(markdown: string) {
+function parseMarkdownToHTML(markdown: string) {
   return marked.parse(markdown);
 }
 
-// Helper function to clean and extract URLs from source strings
-function cleanSourceUrl(source: string): {
-  url: string | null;
-  displayText: string;
-} {
-  // Handle various URL formats including @ prefix, trailing punctuation, and parentheses
-  const urlMatch = source.match(/(?:@)?(https?:\/\/[^\s,;()]+)/);
-  const url = urlMatch ? urlMatch[1] : null;
+// Function to convert citation keys to numbered references with clickable links
+function convertCitationKeysToNumbers(
+  answerText: string,
+  contexts: any[],
+  usedContextIds: string[]
+): string {
+  // Create a mapping from citation keys to numbers and URLs
+  const citationKeyMap = new Map<string, { number: number; url: string }>();
 
-  // Clean display text by removing URL and common prefixes/suffixes
-  let displayText = source
-    .replace(/(?:@)?https?:\/\/[^\s,;()]+/, "")
-    .replace(/^[,\s;()]+|[,\s;()]+$/g, "") // Remove leading/trailing commas, semicolons, parentheses and spaces
-    .trim();
+  // First, map used contexts to numbers 1, 2, 3, etc.
+  const usedContextIdsSet = new Set(usedContextIds);
+  let currentNumber = 1;
 
-  // If display text is empty after cleaning, provide a fallback
-  if (!displayText) {
-    displayText = "Scientific source";
-  }
+  // Process used contexts first
+  contexts.forEach((context) => {
+    if (usedContextIdsSet.has(context.id)) {
+      const citationKey = context.text.name;
+      const citationPattern = `(${citationKey})`;
+      const doiUrl = context.text.doc.doi_url || "#";
 
-  // Clean up common formatting issues
-  displayText = displayText
-    .replace(/\s+/g, " ") // Replace multiple spaces with single space
-    .replace(/^[A-Za-z\s]+:\s*/, "") // Remove common prefixes like "Source:", "Reference:", etc.
-    .trim();
+      citationKeyMap.set(citationPattern, {
+        number: currentNumber++,
+        url: doiUrl,
+      });
+    }
+  });
 
-  return { url, displayText };
+  // Then process remaining contexts
+  contexts.forEach((context) => {
+    if (!usedContextIdsSet.has(context.id)) {
+      const citationKey = context.text.name;
+      const citationPattern = `(${citationKey})`;
+      const doiUrl = context.text.doc.doi_url || "#";
+
+      citationKeyMap.set(citationPattern, {
+        number: currentNumber++,
+        url: doiUrl,
+      });
+    }
+  });
+
+  // Replace citation keys in answer text with clickable numbered references
+  let result = answerText;
+  citationKeyMap.forEach((citation, key) => {
+    const regex = new RegExp(escapeRegExp(key), "g");
+    const clickableCitation = `<a href="${citation.url}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline font-medium">[${citation.number}]</a>`;
+    result = result.replace(regex, clickableCitation);
+  });
+
+  return result;
 }
 
-// Helper function to format DOI URLs for better display
-function formatDoiUrl(url: string): string {
-  if (url.includes("doi.org/")) {
-    const doi = url.split("doi.org/")[1];
-    return `DOI: ${doi}`;
-  }
-  return url;
+// Helper function to escape special regex characters
+function escapeRegExp(string: string): string {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// Helper function to extract page numbers from context name
+function extractPageNumbers(contextName: string): string | null {
+  const pageMatch = contextName.match(/pages (\d+-\d+)/);
+  return pageMatch ? pageMatch[1] : null;
 }

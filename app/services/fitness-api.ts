@@ -7,11 +7,81 @@ export interface QueryRequest {
   question: string;
 }
 
+// Enhanced types based on the actual API response structure
+export interface DocumentMetadata {
+  embedding?: null;
+  text: string;
+  name: string;
+  doc: {
+    embedding?: null;
+    docname: string;
+    dockey: string;
+    citation: string;
+    fields_to_overwrite_from_metadata: string[];
+    key: string;
+    bibtex: string;
+    authors: string[] | null;
+    publication_date: string;
+    year: number;
+    volume: string;
+    issue: string | null;
+    issn: string | null;
+    pages: string | null;
+    journal: string;
+    publisher: string | null;
+    url: string | null;
+    title: string;
+    citation_count: number | null;
+    bibtex_type: string;
+    source_quality: number;
+    is_retracted: boolean | null;
+    doi: string;
+    doi_url: string;
+    doc_id: string;
+    file_location: string | null;
+    license: string | null;
+    pdf_url: string | null;
+    other: Record<string, any>;
+    formatted_citation: string;
+  };
+}
+
+export interface ContextItem {
+  id: string;
+  context: string;
+  question: string;
+  text: DocumentMetadata;
+  score: number;
+}
+
+export interface PaperQASession {
+  id: string;
+  question: string;
+  answer: string;
+  raw_answer: string;
+  answer_reasoning: string | null;
+  has_successful_answer: boolean;
+  context: string;
+  contexts: ContextItem[];
+  references: string;
+  formatted_answer: string;
+  graded_answer: string | null;
+  cost: number;
+  token_counts: Record<string, [number, number]>;
+  config_md5: string;
+  tool_history: string[][];
+  used_contexts: string[];
+}
+
 export interface QueryResponse {
   answer: string;
-  sources: string[];
+  sources: string[] | null;
   context: string;
-  confidence: string;
+  confidence: string | null;
+  query: string;
+  status: boolean;
+  enhancement_data: any | null;
+  paperqa_session: PaperQASession;
 }
 
 export interface ValidationError {
@@ -61,7 +131,7 @@ async function requestJson<T>(
   const url = joinUrl(baseUrl, path);
 
   const controller = new AbortController();
-  const timeoutMs = options?.timeoutMs ?? 3000_000;
+  const timeoutMs = options?.timeoutMs ?? 2000_000;
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
