@@ -181,7 +181,8 @@ export default function Chat() {
     const processedAnswerText = convertCitationKeysToNumbers(
       message.text,
       paperqa_session?.contexts || [],
-      paperqa_session?.used_contexts || []
+      paperqa_session?.used_contexts || [],
+      messageIndex
     );
 
     return (
@@ -244,7 +245,10 @@ export default function Chat() {
         {/* Scientific References */}
         {(usedContexts.length > 0 || otherContexts.length > 0) && (
           <div className="space-y-3">
-            <h4 className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+            <h4
+              id={`referensi-${messageIndex}`}
+              className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide scroll-mt-20"
+            >
               Referensi Ilmiah
             </h4>
 
@@ -257,7 +261,8 @@ export default function Chat() {
                 {usedContexts.map((context, index) => (
                   <div
                     key={context.id}
-                    className="border-l-2 border-blue-200 dark:border-blue-800 pl-3 py-3 bg-blue-50/50 dark:bg-blue-950/20 rounded-r-md"
+                    id={`ref-${messageIndex}-${index + 1}`}
+                    className="border-l-2 border-blue-200 dark:border-blue-800 pl-3 py-3 bg-blue-50/50 dark:bg-blue-950/20 rounded-r-md scroll-mt-20"
                   >
                     <div className="space-y-2">
                       {/* Reference Number and Title */}
@@ -430,7 +435,10 @@ export default function Chat() {
                     {otherContexts.map((context, index) => (
                       <div
                         key={context.id}
-                        className="border-l-2 border-gray-200 dark:border-gray-700 pl-3 py-3 bg-gray-50/50 dark:bg-gray-950/20 rounded-r-md"
+                        id={`ref-${messageIndex}-${
+                          usedContexts.length + index + 1
+                        }`}
+                        className="border-l-2 border-gray-200 dark:border-gray-700 pl-3 py-3 bg-gray-50/50 dark:bg-gray-950/20 rounded-r-md scroll-mt-20"
                       >
                         <div className="space-y-2">
                           {/* Reference Number and Title */}
@@ -585,7 +593,7 @@ export default function Chat() {
   };
 
   return (
-    <main className="mx-auto flex h-dvh max-h-dvh w-full max-w-4xl flex-col p-4">
+    <main className="mx-auto flex h-dvh max-h-dvh w-full max-w-4xl flex-col p-4 scroll-smooth">
       <header className="flex items-center justify-between gap-2 border-b border-gray-200 pb-3 dark:border-gray-800">
         <h1 className="text-lg font-semibold">Fitness Chatbot</h1>
         <span className="text-xs text-gray-500">
@@ -685,14 +693,18 @@ function parseMarkdownToHTML(markdown: string) {
   return marked.parse(markdown);
 }
 
-// Function to convert citation keys to numbered references with clickable links
+// Function to convert citation keys to numbered references with anchor links
 function convertCitationKeysToNumbers(
   answerText: string,
   contexts: any[],
-  usedContextIds: string[]
+  usedContextIds: string[],
+  messageIndex: number
 ): string {
-  // Create a mapping from citation keys to numbers and URLs
-  const citationKeyMap = new Map<string, { number: number; url: string }>();
+  // Create a mapping from citation keys to numbers and anchor IDs
+  const citationKeyMap = new Map<
+    string,
+    { number: number; anchorId: string }
+  >();
 
   // First, map used contexts to numbers 1, 2, 3, etc.
   const usedContextIdsSet = new Set(usedContextIds);
@@ -703,11 +715,11 @@ function convertCitationKeysToNumbers(
     if (usedContextIdsSet.has(context.id)) {
       const citationKey = context.text.name;
       const citationPattern = `(${citationKey})`;
-      const doiUrl = context.text.doc.doi_url || "#";
+      const anchorId = `ref-${messageIndex}-${currentNumber}`;
 
       citationKeyMap.set(citationPattern, {
         number: currentNumber++,
-        url: doiUrl,
+        anchorId: anchorId,
       });
     }
   });
@@ -717,11 +729,11 @@ function convertCitationKeysToNumbers(
     if (!usedContextIdsSet.has(context.id)) {
       const citationKey = context.text.name;
       const citationPattern = `(${citationKey})`;
-      const doiUrl = context.text.doc.doi_url || "#";
+      const anchorId = `ref-${messageIndex}-${currentNumber}`;
 
       citationKeyMap.set(citationPattern, {
         number: currentNumber++,
-        url: doiUrl,
+        anchorId: anchorId,
       });
     }
   });
@@ -730,7 +742,7 @@ function convertCitationKeysToNumbers(
   let result = answerText;
   citationKeyMap.forEach((citation, key) => {
     const regex = new RegExp(escapeRegExp(key), "g");
-    const clickableCitation = `<a href="${citation.url}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline font-medium">[${citation.number}]</a>`;
+    const clickableCitation = `<a href="#${citation.anchorId}" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline font-medium">[${citation.number}]</a>`;
     result = result.replace(regex, clickableCitation);
   });
 
