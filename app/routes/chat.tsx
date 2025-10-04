@@ -1,6 +1,10 @@
 import * as React from "react";
 import type { Route } from "./+types/chat";
-import { queryKnowledgeBase, type QueryResponse } from "~/services/fitness-api";
+import {
+  queryKnowledgeBase,
+  type ContextItem,
+  type QueryResponse,
+} from "~/services/fitness-api";
 import { marked } from "marked";
 
 interface ChatMessage {
@@ -696,7 +700,7 @@ function parseMarkdownToHTML(markdown: string) {
 // Function to convert citation keys to numbered references with anchor links
 function convertCitationKeysToNumbers(
   answerText: string,
-  contexts: any[],
+  contexts: ContextItem[],
   usedContextIds: string[],
   messageIndex: number
 ): string {
@@ -713,8 +717,8 @@ function convertCitationKeysToNumbers(
   // Process used contexts first
   contexts.forEach((context) => {
     if (usedContextIdsSet.has(context.id)) {
-      const citationKey = context.text.name;
-      const citationPattern = `(${citationKey})`;
+      const citationKey = context.id;
+      const citationPattern = `${citationKey}`;
       const anchorId = `ref-${messageIndex}-${currentNumber}`;
 
       citationKeyMap.set(citationPattern, {
@@ -728,7 +732,7 @@ function convertCitationKeysToNumbers(
   contexts.forEach((context) => {
     if (!usedContextIdsSet.has(context.id)) {
       const citationKey = context.text.name;
-      const citationPattern = `(${citationKey})`;
+      const citationPattern = `${citationKey}`;
       const anchorId = `ref-${messageIndex}-${currentNumber}`;
 
       citationKeyMap.set(citationPattern, {
@@ -742,7 +746,7 @@ function convertCitationKeysToNumbers(
   let result = answerText;
   citationKeyMap.forEach((citation, key) => {
     const regex = new RegExp(escapeRegExp(key), "g");
-    const clickableCitation = `<a href="#${citation.anchorId}" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline font-medium">[${citation.number}]</a>`;
+    const clickableCitation = `<a href="#${citation.anchorId}" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline font-medium">${citation.number}</a>`;
     result = result.replace(regex, clickableCitation);
   });
 
