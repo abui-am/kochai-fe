@@ -15,10 +15,10 @@ interface ChatMessage {
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "Fitness Chatbot" },
+    { title: "Chatbot Fitness" },
     {
       name: "description",
-      content: "Ask fitness questions backed by scientific papers.",
+      content: "Tanyakan pertanyaan fitness yang didukung oleh makalah ilmiah.",
     },
   ];
 }
@@ -33,6 +33,20 @@ export default function Chat() {
     Set<number>
   >(new Set());
   const listRef = React.useRef<HTMLDivElement | null>(null);
+
+  // Example chat prompts for users
+  const examplePrompts = [
+    "Kenapa pegal-pegal setelah angkat beban terjadi?",
+    "Berapa protein yang diperlukan untuk membangun otot?",
+    "Berapa lama latihan yang efektif?",
+    "Gerakan apa yang harus dilakukan untuk membentuk otot?",
+    "Berapa banyak makanan yang harus dikonsumsi setelah latihan?",
+    "Apa itu set dan repetisi?",
+    "Berapa lama istirahat yang dibutuhkan antar set latihan?",
+    "Kenapa saya harus latihan fisik?",
+    "Kenapa seiring usia kemampuan fisik saya berkurang?",
+    "Kenapa leg day itu penting?",
+  ];
 
   React.useEffect(() => {
     listRef.current?.scrollTo({
@@ -50,27 +64,27 @@ export default function Chat() {
     }
 
     const funnyMessages = [
-      "💪 Flexing my brain muscles...",
-      "🏋️‍♀️ Lifting some mental weights...",
-      "🧠 My neurons are doing cardio...",
-      "📚 Consulting my virtual personal trainer...",
-      "🔬 Mixing science with some magic...",
-      "⚡ Charging up my knowledge batteries...",
-      "🎯 Aiming for the perfect answer...",
-      "🌟 Channeling my inner fitness guru...",
+      "💪 Melatih otot otak saya...",
+      "🏋️‍♀️ Mengangkat beban mental...",
+      "🧠 Neuron saya sedang kardio...",
+      "📚 Berkonsultasi dengan pelatih pribadi virtual...",
+      "🔬 Mencampur sains dengan sedikit sihir...",
+      "⚡ Mengisi baterai pengetahuan saya...",
+      "🎯 Membidik jawaban yang sempurna...",
+      "🌟 Menyalurkan guru fitness dalam diri saya...",
     ];
 
     const steps = [
-      { step: 1, delay: 0, message: "Hmm, let me think about this..." },
+      { step: 1, delay: 0, message: "Hmm, mari saya pikirkan..." },
       {
         step: 2,
         delay: 600,
-        message: "Rummaging through my fitness knowledge...",
+        message: "Mencari di pengetahuan fitness saya...",
       },
       {
         step: 3,
         delay: 1000,
-        message: "Almost there, just polishing the answer!",
+        message: "Hampir selesai, sedang memoles jawaban!",
       },
     ];
 
@@ -98,21 +112,15 @@ export default function Chat() {
     };
   }, [isSending]);
 
-  const handleSubmit: React.FormEventHandler<HTMLFormElement> = async (
-    event
-  ) => {
-    event.preventDefault();
-    const trimmed = inputValue.trim();
-    if (!trimmed || isSending) return;
-
-    const userMessage: ChatMessage = { role: "user", text: trimmed };
+  const handleSendMessage = async (message: string) => {
+    const userMessage: ChatMessage = { role: "user", text: message };
     setMessages((prev) => [...prev, userMessage]);
     setInputValue("");
     setIsSending(true);
 
     try {
       const response = await queryKnowledgeBase({
-        question: trimmed,
+        question: message,
       });
 
       // Use the formatted answer from paperqa_session if available, otherwise fall back to answer
@@ -129,7 +137,7 @@ export default function Chat() {
       console.error("API Error:", error);
       const botMessage: ChatMessage = {
         role: "bot",
-        text: "There was an error contacting the server. Please try again.",
+        text: "Terjadi kesalahan saat menghubungi server. Silakan coba lagi.",
       };
       setMessages((prev) => [...prev, botMessage]);
     } finally {
@@ -137,8 +145,23 @@ export default function Chat() {
     }
   };
 
+  const handleSubmit: React.FormEventHandler<HTMLFormElement> = async (
+    event
+  ) => {
+    event.preventDefault();
+    const message = inputValue.trim();
+    if (!message || isSending) return;
+    handleSendMessage(message);
+  };
+
   const handleChange: React.ChangeEventHandler<HTMLInputElement> = (event) => {
     setInputValue(event.target.value);
+  };
+
+  const handleExampleClick = async (prompt: string) => {
+    // Create a synthetic event to reuse handleSubmit logic
+    setInputValue(prompt);
+    handleSendMessage(prompt);
   };
 
   const toggleReferencesDropdown = (messageIndex: number) => {
@@ -157,7 +180,7 @@ export default function Chat() {
     if (!message.response) {
       return (
         <p
-          className="text-sm leading-relaxed [&>p]:mb-1"
+          className="text-sm leading-relaxed [&>p]:mb-1 [&>h3]:text-xl [&>h3]:font-bold"
           dangerouslySetInnerHTML={{
             __html: parseMarkdownToHTML(message.text),
           }}
@@ -167,7 +190,6 @@ export default function Chat() {
 
     const { paperqa_session, confidence, status } = message.response;
 
-    console.log(message.text);
     // Separate used contexts from other contexts
     const usedContextIds = new Set(paperqa_session?.used_contexts || []);
     const usedContexts =
@@ -193,7 +215,7 @@ export default function Chat() {
       <div className="space-y-4">
         {/* Main Answer */}
         <div
-          className="text-sm leading-relaxed [&>p]:mb-2 [&>ol]:list-decimal [&>ol]:list-outside [&>ol]:ml-4 [&>ol>li]:mb-2"
+          className="text-sm leading-relaxed [&>p]:mb-2 [&>ol]:list-decimal [&>ol]:list-outside [&>ol]:ml-4 [&>ol>li]:mb-2 [&>h3]:text-lg [&>h3]:font-bold [&>h3]:mb-2"
           dangerouslySetInnerHTML={{
             __html: parseMarkdownToHTML(processedAnswerText),
           }}
@@ -201,22 +223,6 @@ export default function Chat() {
 
         {/* Status and Confidence Indicator */}
         <div className="flex items-center gap-3 text-xs">
-          {/* Status Indicator */}
-          <div className="flex items-center gap-2">
-            <span className="font-medium text-gray-600 dark:text-gray-400">
-              Status:
-            </span>
-            <span
-              className={`px-2 py-1 rounded-full text-xs font-medium ${
-                status
-                  ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                  : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-              }`}
-            >
-              {status ? "Berhasil" : "Gagal"}
-            </span>
-          </div>
-
           {/* Confidence Indicator */}
           {confidence && (
             <div className="flex items-center gap-2">
@@ -337,42 +343,22 @@ export default function Chat() {
                       )}
 
                       {/* Citation Count and Quality */}
-                      <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-500">
-                        <div>
-                          <span className="font-medium">Skor Relevansi:</span>
-                          <span className="ml-1 font-semibold text-blue-600 dark:text-blue-400">
-                            {context.score}
-                          </span>
-                        </div>
-                        {context.text.doc.citation_count && (
+                      {context.text.doc.citation_count && (
+                        <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-500">
+                          <div>
+                            <span className="font-medium">Skor Relevansi:</span>
+                            <span className="ml-1 font-semibold text-blue-600 dark:text-blue-400">
+                              {context.score}
+                            </span>
+                          </div>
                           <div>
                             <span className="font-medium">Kutipan:</span>
                             <span className="ml-1">
-                              {context.text.doc.citation_count}
+                              {context.text.doc.citation_count ?? 0}
                             </span>
                           </div>
-                        )}
-                        {context.text.doc.source_quality && (
-                          <div>
-                            <span className="font-medium">Kualitas:</span>
-                            <span
-                              className={`ml-1 px-1 py-0.5 rounded text-xs ${
-                                context.text.doc.source_quality >= 3
-                                  ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                                  : context.text.doc.source_quality >= 2
-                                  ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
-                                  : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-                              }`}
-                            >
-                              {context.text.doc.source_quality >= 3
-                                ? "Tinggi"
-                                : context.text.doc.source_quality >= 2
-                                ? "Sedang"
-                                : "Rendah"}
-                            </span>
-                          </div>
-                        )}
-                      </div>
+                        </div>
+                      )}
 
                       {/* Publisher and ISSN */}
                       {(context.text.doc.publisher ||
@@ -523,34 +509,12 @@ export default function Chat() {
                                 {context.score}
                               </span>
                             </div>
-                            {context.text.doc.citation_count && (
-                              <div>
-                                <span className="font-medium">Kutipan:</span>
-                                <span className="ml-1">
-                                  {context.text.doc.citation_count}
-                                </span>
-                              </div>
-                            )}
-                            {context.text.doc.source_quality && (
-                              <div>
-                                <span className="font-medium">Kualitas:</span>
-                                <span
-                                  className={`ml-1 px-1 py-0.5 rounded text-xs ${
-                                    context.text.doc.source_quality >= 3
-                                      ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                                      : context.text.doc.source_quality >= 2
-                                      ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
-                                      : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-                                  }`}
-                                >
-                                  {context.text.doc.source_quality >= 3
-                                    ? "High"
-                                    : context.text.doc.source_quality >= 2
-                                    ? "Medium"
-                                    : "Low"}
-                                </span>
-                              </div>
-                            )}
+                            <div>
+                              <span className="font-medium">Kutipan:</span>
+                              <span className="ml-1">
+                                {context.text.doc.citation_count ?? 0}
+                              </span>
+                            </div>
                           </div>
 
                           {/* Publisher and ISSN */}
@@ -599,9 +563,9 @@ export default function Chat() {
   return (
     <main className="mx-auto flex h-dvh max-h-dvh w-full max-w-4xl flex-col p-4 scroll-smooth">
       <header className="flex items-center justify-between gap-2 border-b border-gray-200 pb-3 dark:border-gray-800">
-        <h1 className="text-lg font-semibold">Fitness Chatbot</h1>
+        <h1 className="text-lg font-semibold">Chatbot Fitness</h1>
         <span className="text-xs text-gray-500">
-          Powered by scientific papers
+          Didukung oleh makalah ilmiah
         </span>
       </header>
 
@@ -612,7 +576,27 @@ export default function Chat() {
       >
         {messages.length === 0 ? (
           <div className="flex h-full items-center justify-center text-sm text-gray-500">
-            Ask anything about training, nutrition, or recovery.
+            <div className="text-center space-y-2">
+              <p>Selamat datang di Chatbot Fitness! 🤖💪</p>
+              <p>Tanyakan apa saja tentang:</p>
+              <div className="flex flex-wrap justify-center gap-2 text-xs">
+                <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
+                  Latihan
+                </span>
+                <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full">
+                  Nutrisi
+                </span>
+                <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full">
+                  Pemulihan
+                </span>
+                <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded-full">
+                  Kesehatan
+                </span>
+              </div>
+              <p className="text-xs mt-2">
+                Jawaban didukung oleh penelitian ilmiah terkini
+              </p>
+            </div>
           </div>
         ) : (
           messages.map((message, index) => (
@@ -660,13 +644,33 @@ export default function Chat() {
                   <span className="h-1 w-1 animate-pulse rounded-full bg-blue-500 [animation-delay:150ms]" />
                   <span className="h-1 w-1 animate-pulse rounded-full bg-blue-500 [animation-delay:300ms]" />
                   <span className="ml-2 text-xs text-gray-400">💭</span>
-                  <span className="sr-only">Processing your request</span>
+                  <span className="sr-only">Memproses permintaan Anda</span>
                 </div>
               </div>
             </div>
           </div>
         )}
       </section>
+
+      {/* Example Chat Prompts */}
+      {messages.length <= 1 && !isSending && (
+        <div className="mt-3 mb-3">
+          <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">
+            Coba tanyakan:
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {examplePrompts.map((prompt, index) => (
+              <button
+                key={index}
+                onClick={() => handleExampleClick(prompt)}
+                className="px-3 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full transition-colors border border-gray-200 dark:border-gray-700"
+              >
+                {prompt}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <form
         onSubmit={handleSubmit}
@@ -676,17 +680,17 @@ export default function Chat() {
         <input
           value={inputValue}
           onChange={handleChange}
-          placeholder="Type your message..."
-          aria-label="Message input"
+          placeholder="Ketik pesan Anda..."
+          aria-label="Input pesan"
           className="flex-1 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm outline-none ring-0 placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-800 dark:bg-gray-950"
         />
         <button
           type="submit"
-          aria-label="Send message"
+          aria-label="Kirim pesan"
           disabled={isSending || inputValue.trim().length === 0}
           className="inline-flex items-center justify-center whitespace-nowrap rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Send
+          Kirim
         </button>
       </form>
     </main>
