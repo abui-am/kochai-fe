@@ -1,13 +1,83 @@
-// Types derived from the provided OpenAPI spec
-export interface DocumentInfo {
-  documents: string[];
+// Complete TypeScript types derived from the OpenAPI specification
+
+// User and Authentication Types
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
 }
 
+export interface UserPreferences {
+  fitness_goals?: string[] | null;
+  experience_level?: string | null;
+  preferred_workout_types?: string[] | null;
+  workout_frequency?: string | null;
+  available_equipment?: string[] | null;
+  dietary_restrictions?: string[] | null;
+  notifications_enabled?: boolean;
+  email_updates?: boolean;
+  language?: string;
+  timezone?: string | null;
+}
+
+export interface UserProfileUpdate {
+  name?: string | null;
+  picture?: string | null;
+  bio?: string | null;
+  location?: string | null;
+  website?: string | null;
+}
+
+export interface UserRegistration {
+  email: string;
+  name: string;
+  password: string;
+  profile?: UserProfileUpdate | null;
+  preferences?: UserPreferences | null;
+}
+
+export interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+export interface LoginResponse {
+  message: string;
+  user: User;
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+}
+
+export interface RegistrationResponse {
+  message: string;
+  user: User;
+  registration_status: RegistrationStatus;
+  requires_completion: boolean;
+}
+
+export interface RegistrationStatus {
+  is_registered: boolean;
+  profile_completed?: boolean;
+  preferences_set?: boolean;
+  email_verified?: boolean;
+  registration_date?: string | null;
+  last_updated?: string;
+}
+
+export interface ProfileResponse {
+  user: User;
+  preferences?: UserPreferences | null;
+  registration_status: RegistrationStatus;
+}
+
+// Query and Knowledge Base Types
 export interface QueryRequest {
   question: string;
 }
 
-// Enhanced types based on the actual API response structure
 export interface DocumentMetadata {
   embedding?: null;
   text: string;
@@ -80,10 +150,30 @@ export interface QueryResponse {
   confidence: string | null;
   query: string;
   status: boolean;
-  enhancement_data: any | null;
+  enhancement_data?: any | null;
   paperqa_session: PaperQASession;
 }
 
+// System Types
+export interface SystemStatus {
+  system_status: string;
+  documents_loaded: boolean;
+  total_documents: number;
+  system_health: string;
+  index_built: boolean;
+  auto_indexing: boolean;
+}
+
+export interface UserStats {
+  total_queries: number;
+  queries_this_month: number;
+  favorite_topics: string[];
+  last_activity?: string | null;
+  account_created: string;
+  registration_completed: boolean;
+}
+
+// Error Types
 export interface ValidationError {
   loc: Array<string | number>;
   msg: string;
@@ -113,7 +203,7 @@ export class ApiError<TBody = unknown> extends Error {
 function getApiBaseUrl(): string {
   const envBase = import.meta.env.VITE_API_BASE_URL;
   if (envBase && envBase.trim().length > 0) return envBase.replace(/\/$/, "");
-  return "";
+  return "http://localhost:8000"; // Default fallback for development
 }
 
 function joinUrl(base: string, path: string): string {
@@ -131,7 +221,7 @@ async function requestJson<T>(
   const url = joinUrl(baseUrl, path);
 
   const controller = new AbortController();
-  const timeoutMs = options?.timeoutMs ?? 2000_000;
+  const timeoutMs = options?.timeoutMs ?? 30000; // 30 second timeout
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
@@ -174,6 +264,32 @@ async function requestJson<T>(
   }
 }
 
+// Authentication token management
+export function setAuthToken(token: string): void {
+  if (typeof window !== "undefined") {
+    localStorage.setItem("auth_token", token);
+  }
+}
+
+export function getAuthToken(): string | null {
+  if (typeof window !== "undefined") {
+    return localStorage.getItem("auth_token");
+  }
+  return null;
+}
+
+export function removeAuthToken(): void {
+  if (typeof window !== "undefined") {
+    localStorage.removeItem("auth_token");
+  }
+}
+
+function getAuthHeaders(): Record<string, string> {
+  const token = getAuthToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+// Health Check
 export async function fetchHealth(
   options?: RequestOptions
 ): Promise<Record<string, unknown> | undefined> {
@@ -184,12 +300,29 @@ export async function fetchHealth(
   );
 }
 
-export async function fetchDocuments(
+// System Status
+export async function fetchSystemStatus(
   options?: RequestOptions
-): Promise<DocumentInfo> {
-  return requestJson<DocumentInfo>("/documents", { method: "GET" }, options);
+): Promise<SystemStatus> {
+  return requestJson<SystemStatus>(
+    "/system/status",
+    { method: "GET" },
+    options
+  );
 }
 
+// Documents
+export async function fetchDocuments(
+  options?: RequestOptions
+): Promise<{ documents?: string[] } | Record<string, unknown>> {
+  return requestJson<{ documents?: string[] } | Record<string, unknown>>(
+    "/documents",
+    { method: "GET" },
+    options
+  );
+}
+
+// Query (Protected)
 export async function queryKnowledgeBase(
   body: QueryRequest,
   options?: RequestOptions
@@ -199,6 +332,110 @@ export async function queryKnowledgeBase(
     {
       method: "POST",
       body: JSON.stringify(body),
+      headers: getAuthHeaders(),
+    },
+    options
+  );
+}
+
+// Authentication - Login
+export async function loginUser(
+  credentials: LoginCredentials,
+  options?: RequestOptions
+): Promise<LoginResponse> {
+  return requestJson<LoginResponse>(
+    "/login",
+    {
+      method: "POST",
+      body: JSON.stringify(credentials),
+    },
+    options
+  );
+}
+
+// Authentication - Register
+export async function registerUser(
+  userData: UserRegistration,
+  options?: RequestOptions
+): Promise<RegistrationResponse> {
+  return requestJson<RegistrationResponse>(
+    "/register",
+    {
+      method: "POST",
+      body: JSON.stringify(userData),
+    },
+    options
+  );
+}
+
+// Protected Routes - Users Me
+export async function fetchCurrentUser(
+  options?: RequestOptions
+): Promise<User> {
+  return requestJson<User>(
+    "/users/me",
+    {
+      method: "GET",
+      headers: getAuthHeaders(),
+    },
+    options
+  );
+}
+
+// Profile Management (Protected)
+export async function fetchUserProfile(
+  options?: RequestOptions
+): Promise<ProfileResponse> {
+  return requestJson<ProfileResponse>(
+    "/profile",
+    {
+      method: "GET",
+      headers: getAuthHeaders(),
+    },
+    options
+  );
+}
+
+export async function updateUserProfile(
+  profileData: UserProfileUpdate,
+  options?: RequestOptions
+): Promise<ProfileResponse> {
+  return requestJson<ProfileResponse>(
+    "/profile",
+    {
+      method: "PUT",
+      body: JSON.stringify(profileData),
+      headers: getAuthHeaders(),
+    },
+    options
+  );
+}
+
+// Preferences Management (Protected)
+export async function updateUserPreferences(
+  preferences: UserPreferences,
+  options?: RequestOptions
+): Promise<ProfileResponse> {
+  return requestJson<ProfileResponse>(
+    "/preferences",
+    {
+      method: "PUT",
+      body: JSON.stringify(preferences),
+      headers: getAuthHeaders(),
+    },
+    options
+  );
+}
+
+// User Statistics (Protected)
+export async function fetchUserStats(
+  options?: RequestOptions
+): Promise<UserStats> {
+  return requestJson<UserStats>(
+    "/stats",
+    {
+      method: "GET",
+      headers: getAuthHeaders(),
     },
     options
   );
