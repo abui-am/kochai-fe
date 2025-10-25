@@ -46,14 +46,21 @@ npm run dev
 
 Your application will be available at `http://localhost:5173`.
 
-### Authentication Flow
+### Authentication & Onboarding Flow
 
 1. **Home Page** (`/`): Landing page for new users
 2. **Login/Register** (`/login`): Authentication forms
-3. **Chat** (`/chat`): Protected fitness chatbot interface
-4. **Profile** (`/profile`): User settings and preferences
+3. **Onboarding** (`/onboarding`): Multi-step setup for new users (profile + preferences)
+4. **Chat** (`/chat`): Protected fitness chatbot interface
+5. **Profile** (`/profile`): User settings and preferences
 
-The app automatically handles authentication state and redirects users appropriately.
+**New User Journey:**
+
+- Visit home page → Login/Register → Complete onboarding → Access chat
+- **Existing User Journey:**
+- Visit home page → Auto-redirect to chat (if onboarding complete) or onboarding
+
+The app automatically handles authentication state and onboarding completion, providing a smooth user experience.
 
 ## Building for Production
 

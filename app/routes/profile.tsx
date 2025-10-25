@@ -21,6 +21,13 @@ export default function Profile() {
   const { user, refreshUser } = useAuth();
   const [profile, setProfile] = useState<UserProfileUpdate>({});
   const [preferences, setPreferences] = useState<UserPreferences>({});
+
+  // Raw input values for better UX (don't process on every keystroke)
+  const [rawInputs, setRawInputs] = useState({
+    available_equipment: "",
+    dietary_restrictions: "",
+  });
+
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{
     type: "success" | "error";
@@ -88,18 +95,34 @@ export default function Profile() {
   const handlePreferenceChange =
     (field: keyof UserPreferences) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-      const value =
-        field === "fitness_goals" ||
-        field === "preferred_workout_types" ||
-        field === "available_equipment" ||
-        field === "dietary_restrictions"
-          ? e.target.value
-              .split(",")
-              .map((s) => s.trim())
-              .filter((s) => s.length > 0)
-          : e.target.value;
+      const inputValue = e.target.value;
 
-      setPreferences((prev) => ({ ...prev, [field]: value }));
+      if (field === "available_equipment" || field === "dietary_restrictions") {
+        // Store raw input for better UX (no processing on keystroke)
+        setRawInputs((prev) => ({ ...prev, [field]: inputValue }));
+
+        // Process the value for the data model
+        const processedValue = inputValue
+          .split(",")
+          .map((s) => s.trim())
+          .filter((s) => s.length > 0);
+
+        setPreferences((prev) => ({ ...prev, [field]: processedValue }));
+      } else if (
+        field === "fitness_goals" ||
+        field === "preferred_workout_types"
+      ) {
+        // For select-like fields, process comma-separated values
+        const processedValue = inputValue
+          .split(",")
+          .map((s) => s.trim())
+          .filter((s) => s.length > 0);
+
+        setPreferences((prev) => ({ ...prev, [field]: processedValue }));
+      } else {
+        // For single-value fields, use the input directly
+        setPreferences((prev) => ({ ...prev, [field]: inputValue }));
+      }
     };
 
   return (
@@ -290,7 +313,7 @@ export default function Profile() {
                 </label>
                 <input
                   type="text"
-                  value={preferences.available_equipment?.join(", ") || ""}
+                  value={rawInputs.available_equipment}
                   onChange={handlePreferenceChange("available_equipment")}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
                   placeholder="Dumbbell, barbell, treadmill (pisahkan dengan koma)"
@@ -303,7 +326,7 @@ export default function Profile() {
                 </label>
                 <input
                   type="text"
-                  value={preferences.dietary_restrictions?.join(", ") || ""}
+                  value={rawInputs.dietary_restrictions}
                   onChange={handlePreferenceChange("dietary_restrictions")}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
                   placeholder="Vegetarian, alergi kacang (pisahkan dengan koma)"

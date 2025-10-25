@@ -2,11 +2,13 @@ import * as React from "react";
 import type { Route } from "./+types/chat";
 import {
   queryKnowledgeBase,
+  checkOnboardingComplete,
   type ContextItem,
   type QueryResponse,
 } from "~/services/fitness-api";
 import { marked } from "marked";
 import { ProtectedRoute } from "~/components/protected-route";
+import { useNavigate } from "react-router";
 
 interface ChatMessage {
   role: "user" | "bot";
@@ -33,7 +35,46 @@ export default function Chat() {
   const [expandedReferences, setExpandedReferences] = React.useState<
     Set<number>
   >(new Set());
+  const [onboardingCheckDone, setOnboardingCheckDone] =
+    React.useState<boolean>(false);
   const listRef = React.useRef<HTMLDivElement | null>(null);
+  const navigate = useNavigate();
+
+  // Check if user needs to complete onboarding
+  React.useEffect(() => {
+    const checkOnboarding = async () => {
+      try {
+        const isComplete = await checkOnboardingComplete();
+        if (!isComplete) {
+          navigate("/onboarding");
+          return;
+        }
+      } catch (error) {
+        // If check fails, assume onboarding is needed for safety
+        navigate("/onboarding");
+        return;
+      }
+      setOnboardingCheckDone(true);
+    };
+
+    checkOnboarding();
+  }, [navigate]);
+
+  // Don't render chat until onboarding check is complete
+  if (!onboardingCheckDone) {
+    return (
+      <ProtectedRoute>
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-600 dark:text-gray-400">
+              Memeriksa setup profile...
+            </p>
+          </div>
+        </div>
+      </ProtectedRoute>
+    );
+  }
 
   // Example chat prompts for users
   const examplePrompts = [

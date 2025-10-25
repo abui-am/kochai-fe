@@ -12,10 +12,27 @@ The application includes a complete authentication system with login, registrati
 
 ### Routing Structure
 
-- **`/` (Home)**: Landing page for unauthenticated users, redirects authenticated users to chat
+- **`/` (Home)**: Landing page for unauthenticated users, redirects authenticated users to chat or onboarding
 - **`/login`**: Login and registration forms (switches between login/register modes)
-- **`/chat`**: Protected chat interface (requires authentication)
+- **`/onboarding`**: Multi-step onboarding flow for new users (profile + preferences setup)
+- **`/chat`**: Protected chat interface (requires authentication + completed onboarding)
 - **`/profile`**: Protected user profile and preferences management
+
+### Onboarding Flow
+
+New users who haven't completed their profile and preferences will be automatically redirected to the onboarding flow:
+
+1. **Profile Setup**: Basic information (name, bio, location, website)
+2. **Fitness Preferences**: Goals, experience level, workout frequency, equipment, dietary restrictions
+3. **Completion**: Redirect to chat interface
+
+The onboarding flow includes:
+
+- **Progress tracking**: Visual progress bar showing current step
+- **Form validation**: Client-side validation with error handling
+- **Auto-save**: Profile and preferences are saved to the backend
+- **Skip protection**: Users must complete both steps before accessing chat
+- **Space-friendly inputs**: All input fields properly handle spaces and special characters
 
 ### Features
 
@@ -54,6 +71,19 @@ await register({
 logout();
 ```
 
+### Onboarding Check
+
+```typescript
+import { checkOnboardingComplete } from "~/services/fitness-api";
+
+// Check if user needs to complete onboarding
+const needsOnboarding = await checkOnboardingComplete();
+if (!needsOnboarding) {
+  // Redirect to onboarding flow
+  navigate("/onboarding");
+}
+```
+
 ### Protected Routes
 
 Wrap any component that requires authentication with `ProtectedRoute`:
@@ -83,6 +113,7 @@ export default function MyProtectedComponent() {
 - `updateUserProfile(profileData: UserProfileUpdate)` - Update profile
 - `updateUserPreferences(preferences: UserPreferences)` - Update preferences
 - `fetchUserStats()` - Get user statistics
+- `checkOnboardingComplete()` - Check if user has completed onboarding (profile + preferences)
 
 ### Knowledge Base
 

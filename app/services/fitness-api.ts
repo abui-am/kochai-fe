@@ -443,3 +443,22 @@ export async function fetchUserStats(
     options
   );
 }
+
+// Check if user onboarding is complete (profile + preferences)
+export async function checkOnboardingComplete(
+  options?: RequestOptions
+): Promise<boolean> {
+  try {
+    const profileResponse = await fetchUserProfile(options);
+    const { registration_status } = profileResponse;
+
+    // Check if both profile and preferences are completed
+    return !!(
+      registration_status.profile_completed &&
+      registration_status.preferences_set
+    );
+  } catch (error) {
+    // If profile fetch fails, assume onboarding is not complete
+    return false;
+  }
+}

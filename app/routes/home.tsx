@@ -2,6 +2,7 @@ import React from "react";
 import type { Route } from "./+types/home";
 import { useAuth } from "~/contexts/auth-context";
 import { useNavigate } from "react-router";
+import { checkOnboardingComplete } from "~/services/fitness-api";
 import logoDark from "../welcome/logo-dark.svg";
 import logoLight from "../welcome/logo-light.svg";
 
@@ -19,14 +20,30 @@ export function meta({}: Route.MetaArgs) {
 export default function Home() {
   const { isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
+  const [onboardingCheckDone, setOnboardingCheckDone] = React.useState(false);
 
   React.useEffect(() => {
     if (isAuthenticated) {
-      navigate("/chat");
+      const checkAndRedirect = async () => {
+        try {
+          const isComplete = await checkOnboardingComplete();
+          if (isComplete) {
+            navigate("/chat");
+          } else {
+            navigate("/onboarding");
+          }
+        } catch (error) {
+          // If check fails, redirect to onboarding for safety
+          navigate("/onboarding");
+        }
+        setOnboardingCheckDone(true);
+      };
+
+      checkAndRedirect();
     }
   }, [isAuthenticated, navigate]);
 
-  if (isLoading) {
+  if (isLoading || (isAuthenticated && !onboardingCheckDone)) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
@@ -38,7 +55,7 @@ export default function Home() {
   }
 
   if (isAuthenticated) {
-    return null; // Will redirect to chat
+    return null; // Will redirect to chat or onboarding
   }
 
   return (
