@@ -6,6 +6,66 @@ This document describes the comprehensive API client implementation that matches
 
 The `app/services/fitness-api.ts` file provides a complete TypeScript client for the Fitness Knowledge Base API, implementing all endpoints defined in the OpenAPI specification.
 
+## Authentication Flow
+
+The application includes a complete authentication system with login, registration, and protected routes:
+
+### Routing Structure
+
+- **`/` (Home)**: Landing page for unauthenticated users, redirects authenticated users to chat
+- **`/login`**: Login and registration forms (switches between login/register modes)
+- **`/chat`**: Protected chat interface (requires authentication)
+- **`/profile`**: Protected user profile and preferences management
+
+### Features
+
+- **JWT Token Management**: Automatic token storage and retrieval from localStorage
+- **Protected Routes**: Routes that require authentication are wrapped with `ProtectedRoute`
+- **Auto-redirect**: Unauthenticated users are redirected to login, authenticated users to chat
+- **Context Management**: `AuthContext` provides authentication state throughout the app
+- **Loading States**: Proper loading indicators during authentication checks
+
+### Authentication Components
+
+- **Login Form**: Email/password login with validation and error handling
+- **Register Form**: User registration with password confirmation and validation
+- **Navigation**: Shows user info and logout option for authenticated users
+- **Protected Route**: Wrapper that handles authentication checks and redirects
+
+### Usage
+
+```typescript
+import { useAuth } from "~/contexts/auth-context";
+
+// In any component
+const { user, isAuthenticated, login, register, logout } = useAuth();
+
+// Login
+await login({ email: "user@example.com", password: "password123" });
+
+// Register
+await register({
+  email: "user@example.com",
+  name: "John Doe",
+  password: "password123",
+});
+
+// Logout
+logout();
+```
+
+### Protected Routes
+
+Wrap any component that requires authentication with `ProtectedRoute`:
+
+```typescript
+import { ProtectedRoute } from "~/components/protected-route";
+
+export default function MyProtectedComponent() {
+  return <ProtectedRoute>{/* Your protected content */}</ProtectedRoute>;
+}
+```
+
 ## Available Functions
 
 ### Authentication

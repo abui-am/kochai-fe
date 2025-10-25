@@ -6,6 +6,7 @@ import {
   type QueryResponse,
 } from "~/services/fitness-api";
 import { marked } from "marked";
+import { ProtectedRoute } from "~/components/protected-route";
 
 interface ChatMessage {
   role: "user" | "bot";
@@ -561,139 +562,141 @@ export default function Chat() {
   };
 
   return (
-    <main className="mx-auto flex h-dvh max-h-dvh w-full max-w-4xl flex-col p-4 scroll-smooth">
-      <header className="flex items-center justify-between gap-2 border-b border-gray-200 pb-3 dark:border-gray-800">
-        <h1 className="text-lg font-semibold">Chatbot Fitness</h1>
-        <span className="text-xs text-gray-500">
-          Didukung oleh makalah ilmiah
-        </span>
-      </header>
+    <ProtectedRoute>
+      <main className="mx-auto flex h-dvh max-h-dvh w-full max-w-4xl flex-col p-4 scroll-smooth">
+        <header className="flex items-center justify-between gap-2 border-b border-gray-200 pb-3 dark:border-gray-800">
+          <h1 className="text-lg font-semibold">Chatbot Fitness</h1>
+          <span className="text-xs text-gray-500">
+            Didukung oleh makalah ilmiah
+          </span>
+        </header>
 
-      <section
-        ref={listRef}
-        aria-label="Chat conversation"
-        className="mt-4 flex-1 space-y-3 overflow-y-auto rounded-md border border-gray-200 p-3 dark:border-gray-800"
-      >
-        {messages.length === 0 ? (
-          <div className="flex h-full items-center justify-center text-sm text-gray-500">
-            <div className="text-center space-y-2">
-              <p>Selamat datang di Chatbot Fitness! 🤖💪</p>
-              <p>Tanyakan apa saja tentang:</p>
-              <div className="flex flex-wrap justify-center gap-2 text-xs">
-                <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
-                  Latihan
-                </span>
-                <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full">
-                  Nutrisi
-                </span>
-                <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full">
-                  Pemulihan
-                </span>
-                <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded-full">
-                  Kesehatan
-                </span>
+        <section
+          ref={listRef}
+          aria-label="Chat conversation"
+          className="mt-4 flex-1 space-y-3 overflow-y-auto rounded-md border border-gray-200 p-3 dark:border-gray-800"
+        >
+          {messages.length === 0 ? (
+            <div className="flex h-full items-center justify-center text-sm text-gray-500">
+              <div className="text-center space-y-2">
+                <p>Selamat datang di Chatbot Fitness! 🤖💪</p>
+                <p>Tanyakan apa saja tentang:</p>
+                <div className="flex flex-wrap justify-center gap-2 text-xs">
+                  <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
+                    Latihan
+                  </span>
+                  <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full">
+                    Nutrisi
+                  </span>
+                  <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full">
+                    Pemulihan
+                  </span>
+                  <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded-full">
+                    Kesehatan
+                  </span>
+                </div>
+                <p className="text-xs mt-2">
+                  Jawaban didukung oleh penelitian ilmiah terkini
+                </p>
               </div>
-              <p className="text-xs mt-2">
-                Jawaban didukung oleh penelitian ilmiah terkini
-              </p>
             </div>
-          </div>
-        ) : (
-          messages.map((message, index) => (
-            <div
-              key={index}
-              className={
-                message.role === "user"
-                  ? "flex justify-end"
-                  : "flex justify-start"
-              }
-            >
+          ) : (
+            messages.map((message, index) => (
               <div
+                key={index}
                 className={
                   message.role === "user"
-                    ? "max-w-[80%] rounded-2xl bg-blue-600 px-4 py-2 text-white"
-                    : "max-w-[90%] rounded-2xl bg-gray-100 px-4 py-2 text-gray-900 dark:bg-gray-900 dark:text-gray-100"
+                    ? "flex justify-end"
+                    : "flex justify-start"
                 }
               >
-                {message.role === "user" ? (
-                  <p className="text-sm leading-relaxed">{message.text}</p>
-                ) : (
-                  renderBotMessage(message, index)
-                )}
+                <div
+                  className={
+                    message.role === "user"
+                      ? "max-w-[80%] rounded-2xl bg-blue-600 px-4 py-2 text-white"
+                      : "max-w-[90%] rounded-2xl bg-gray-100 px-4 py-2 text-gray-900 dark:bg-gray-900 dark:text-gray-100"
+                  }
+                >
+                  {message.role === "user" ? (
+                    <p className="text-sm leading-relaxed">{message.text}</p>
+                  ) : (
+                    renderBotMessage(message, index)
+                  )}
+                </div>
               </div>
-            </div>
-          ))
-        )}
+            ))
+          )}
 
-        {isSending && (
-          <div className="flex justify-start">
-            <div className="max-w-[90%] rounded-2xl bg-gray-100 px-4 py-3 text-gray-900 dark:bg-gray-900 dark:text-gray-100 flex gap-3">
-              <div className="space-y-3">
-                {/* Funny Messages */}
-                {funnyMessage && (
-                  <div className="flex items-center justify-center py-1">
-                    <div className="text-xs text-gray-500 dark:text-gray-400 animate-pulse">
-                      {funnyMessage}
+          {isSending && (
+            <div className="flex justify-start">
+              <div className="max-w-[90%] rounded-2xl bg-gray-100 px-4 py-3 text-gray-900 dark:bg-gray-900 dark:text-gray-100 flex gap-3">
+                <div className="space-y-3">
+                  {/* Funny Messages */}
+                  {funnyMessage && (
+                    <div className="flex items-center justify-center py-1">
+                      <div className="text-xs text-gray-500 dark:text-gray-400 animate-pulse">
+                        {funnyMessage}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Animated Dots for Visual Appeal */}
-                <div className="flex items-center justify-center gap-1">
-                  <span className="h-1 w-1 animate-pulse rounded-full bg-blue-500 [animation-delay:0ms]" />
-                  <span className="h-1 w-1 animate-pulse rounded-full bg-blue-500 [animation-delay:150ms]" />
-                  <span className="h-1 w-1 animate-pulse rounded-full bg-blue-500 [animation-delay:300ms]" />
-                  <span className="ml-2 text-xs text-gray-400">💭</span>
-                  <span className="sr-only">Memproses permintaan Anda</span>
+                  {/* Animated Dots for Visual Appeal */}
+                  <div className="flex items-center justify-center gap-1">
+                    <span className="h-1 w-1 animate-pulse rounded-full bg-blue-500 [animation-delay:0ms]" />
+                    <span className="h-1 w-1 animate-pulse rounded-full bg-blue-500 [animation-delay:150ms]" />
+                    <span className="h-1 w-1 animate-pulse rounded-full bg-blue-500 [animation-delay:300ms]" />
+                    <span className="ml-2 text-xs text-gray-400">💭</span>
+                    <span className="sr-only">Memproses permintaan Anda</span>
+                  </div>
                 </div>
               </div>
             </div>
+          )}
+        </section>
+
+        {/* Example Chat Prompts */}
+        {messages.length <= 1 && !isSending && (
+          <div className="mt-3 mb-3">
+            <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">
+              Coba tanyakan:
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {examplePrompts.map((prompt, index) => (
+                <button
+                  key={index}
+                  onClick={() => handleExampleClick(prompt)}
+                  className="px-3 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full transition-colors border border-gray-200 dark:border-gray-700"
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
           </div>
         )}
-      </section>
 
-      {/* Example Chat Prompts */}
-      {messages.length <= 1 && !isSending && (
-        <div className="mt-3 mb-3">
-          <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">
-            Coba tanyakan:
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {examplePrompts.map((prompt, index) => (
-              <button
-                key={index}
-                onClick={() => handleExampleClick(prompt)}
-                className="px-3 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full transition-colors border border-gray-200 dark:border-gray-700"
-              >
-                {prompt}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <form
-        onSubmit={handleSubmit}
-        className="mt-3 flex items-center gap-2"
-        aria-label="Message input form"
-      >
-        <input
-          value={inputValue}
-          onChange={handleChange}
-          placeholder="Ketik pesan Anda..."
-          aria-label="Input pesan"
-          className="flex-1 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm outline-none ring-0 placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-800 dark:bg-gray-950"
-        />
-        <button
-          type="submit"
-          aria-label="Kirim pesan"
-          disabled={isSending || inputValue.trim().length === 0}
-          className="inline-flex items-center justify-center whitespace-nowrap rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+        <form
+          onSubmit={handleSubmit}
+          className="mt-3 flex items-center gap-2"
+          aria-label="Message input form"
         >
-          Kirim
-        </button>
-      </form>
-    </main>
+          <input
+            value={inputValue}
+            onChange={handleChange}
+            placeholder="Ketik pesan Anda..."
+            aria-label="Input pesan"
+            className="flex-1 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm outline-none ring-0 placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-800 dark:bg-gray-950"
+          />
+          <button
+            type="submit"
+            aria-label="Kirim pesan"
+            disabled={isSending || inputValue.trim().length === 0}
+            className="inline-flex items-center justify-center whitespace-nowrap rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Kirim
+          </button>
+        </form>
+      </main>
+    </ProtectedRoute>
   );
 }
 

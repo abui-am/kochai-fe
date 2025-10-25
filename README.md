@@ -1,20 +1,32 @@
-# Welcome to React Router!
+# 💪 Fitness Chatbot
 
-A modern, production-ready template for building full-stack React applications using React Router.
-
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/remix-run/react-router-templates/tree/main/default)
+An AI-powered fitness knowledge base chatbot built with React Router, featuring authentication and scientific paper analysis using PaperQA.
 
 ## Features
 
-- 🚀 Server-side rendering
-- ⚡️ Hot Module Replacement (HMR)
-- 📦 Asset bundling and optimization
-- 🔄 Data loading and mutations
-- 🔒 TypeScript by default
-- 🎉 TailwindCSS for styling
-- 📖 [React Router docs](https://reactrouter.com/)
+- 🚀 **AI-Powered Responses**: GPT-4 powered fitness advice with scientific citations
+- 🔐 **Complete Authentication**: Login, registration, and user management
+- 📚 **Scientific Sources**: All responses include citations from research papers
+- 🎯 **Personalized Experience**: User profiles and fitness preferences
+- 🛡️ **Protected Routes**: Secure authentication flow with JWT tokens
+- 📱 **Responsive Design**: Mobile-friendly interface with Tailwind CSS
+- ⚡️ **Hot Module Replacement**: Fast development with React Router
+- 🔄 **Type Safety**: Full TypeScript implementation
+
+## Tech Stack
+
+- **Frontend**: React 19, React Router 7, TypeScript
+- **Styling**: Tailwind CSS with dark mode support
+- **Authentication**: JWT tokens with localStorage management
+- **API**: RESTful API client with comprehensive error handling
+- **Build**: Vite with SSR support
 
 ## Getting Started
+
+### Prerequisites
+
+- Node.js 18+
+- Backend API server running on `http://localhost:8000` (or configure `VITE_API_BASE_URL`)
 
 ### Installation
 
@@ -33,6 +45,15 @@ npm run dev
 ```
 
 Your application will be available at `http://localhost:5173`.
+
+### Authentication Flow
+
+1. **Home Page** (`/`): Landing page for new users
+2. **Login/Register** (`/login`): Authentication forms
+3. **Chat** (`/chat`): Protected fitness chatbot interface
+4. **Profile** (`/profile`): User settings and preferences
+
+The app automatically handles authentication state and redirects users appropriately.
 
 ## Building for Production
 

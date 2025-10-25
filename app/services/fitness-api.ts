@@ -334,7 +334,10 @@ export async function queryKnowledgeBase(
       body: JSON.stringify(body),
       headers: getAuthHeaders(),
     },
-    options
+    {
+      timeoutMs: 30000,
+      ...options,
+    }
   );
 }
 
@@ -357,8 +360,8 @@ export async function loginUser(
 export async function registerUser(
   userData: UserRegistration,
   options?: RequestOptions
-): Promise<RegistrationResponse> {
-  return requestJson<RegistrationResponse>(
+): Promise<LoginResponse> {
+  return requestJson<LoginResponse>(
     "/register",
     {
       method: "POST",
