@@ -33,6 +33,7 @@ The onboarding flow includes:
 - **Auto-save**: Profile and preferences are saved to the backend
 - **Skip protection**: Users must complete both steps before accessing chat
 - **Space-friendly inputs**: All input fields properly handle spaces and special characters
+- **Robust completion check**: Multiple fallback methods ensure users who complete onboarding can access chat
 
 ### Features
 

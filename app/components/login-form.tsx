@@ -46,7 +46,7 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
             Masuk
           </h2>
           <p className="text-gray-600 dark:text-gray-400">
-            Masuk ke akun Anda untuk mengakses chatbot fitness
+            Masuk ke akun Anda untuk mengakses KochAI
           </p>
         </div>
 

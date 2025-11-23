@@ -78,6 +78,10 @@ export interface QueryRequest {
   question: string;
 }
 
+export interface VanillaQueryRequest {
+  text: string;
+}
+
 export interface DocumentMetadata {
   embedding?: null;
   text: string;
@@ -152,6 +156,19 @@ export interface QueryResponse {
   status: boolean;
   enhancement_data?: any | null;
   paperqa_session: PaperQASession;
+}
+
+export interface VanillaQueryResponse {
+  answer: string;
+  model: string;
+  usage?: {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    total_tokens?: number;
+  };
+  query: string;
+  status: "success" | "error" | string;
+  preferences?: UserPreferences | null;
 }
 
 // System Types
@@ -335,7 +352,26 @@ export async function queryKnowledgeBase(
       headers: getAuthHeaders(),
     },
     {
-      timeoutMs: 30000,
+      timeoutMs: 300000,
+      ...options,
+    }
+  );
+}
+
+// Query Vanilla LLM (Protected) - Base LLM without RAG
+export async function queryVanilla(
+  body: VanillaQueryRequest,
+  options?: RequestOptions
+): Promise<VanillaQueryResponse> {
+  return requestJson<VanillaQueryResponse>(
+    "/query/vanilla",
+    {
+      method: "POST",
+      body: JSON.stringify(body),
+      headers: getAuthHeaders(),
+    },
+    {
+      timeoutMs: 300000,
       ...options,
     }
   );
@@ -450,13 +486,29 @@ export async function checkOnboardingComplete(
 ): Promise<boolean> {
   try {
     const profileResponse = await fetchUserProfile(options);
-    const { registration_status } = profileResponse;
+    const { user, preferences, registration_status } = profileResponse;
 
-    // Check if both profile and preferences are completed
-    return !!(
+    // Method 1: Check registration status flags (if backend updates them)
+    const statusComplete = !!(
       registration_status.profile_completed &&
       registration_status.preferences_set
     );
+
+    // Method 2: Check actual data presence (fallback if status flags aren't updated)
+    const dataComplete = !!(
+      user.name &&
+      user.name.trim().length > 0 &&
+      preferences &&
+      preferences.fitness_goals &&
+      preferences.fitness_goals.length > 0 &&
+      preferences.experience_level &&
+      preferences.experience_level.trim().length > 0 &&
+      preferences.workout_frequency &&
+      preferences.workout_frequency.trim().length > 0
+    );
+
+    // Return true if either method indicates completion
+    return statusComplete || dataComplete;
   } catch (error) {
     // If profile fetch fails, assume onboarding is not complete
     return false;

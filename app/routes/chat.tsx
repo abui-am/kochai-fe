@@ -2,9 +2,12 @@ import * as React from "react";
 import type { Route } from "./+types/chat";
 import {
   queryKnowledgeBase,
+  queryVanilla,
   checkOnboardingComplete,
+  fetchUserProfile,
   type ContextItem,
   type QueryResponse,
+  type VanillaQueryRequest,
 } from "~/services/fitness-api";
 import { marked } from "marked";
 import { ProtectedRoute } from "~/components/protected-route";
@@ -18,7 +21,7 @@ interface ChatMessage {
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "Chatbot Fitness" },
+    { title: "KochAI" },
     {
       name: "description",
       content: "Tanyakan pertanyaan fitness yang didukung oleh makalah ilmiah.",
@@ -30,11 +33,10 @@ export default function Chat() {
   const [messages, setMessages] = React.useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = React.useState<string>("");
   const [isSending, setIsSending] = React.useState<boolean>(false);
-  const [loadingStep, setLoadingStep] = React.useState<number>(0);
-  const [funnyMessage, setFunnyMessage] = React.useState<string>("");
   const [expandedReferences, setExpandedReferences] = React.useState<
-    Set<number>
+    Set<string>
   >(new Set());
+  const [useVanillaMode, setUseVanillaMode] = React.useState<boolean>(false);
   const [onboardingCheckDone, setOnboardingCheckDone] =
     React.useState<boolean>(false);
   const listRef = React.useRef<HTMLDivElement | null>(null);
@@ -46,11 +48,30 @@ export default function Chat() {
       try {
         const isComplete = await checkOnboardingComplete();
         if (!isComplete) {
-          navigate("/onboarding");
-          return;
+          // Double-check by fetching profile data directly
+          const profileResponse = await fetchUserProfile();
+          const { user, preferences } = profileResponse;
+
+          // If user has provided required data, allow access even if status flags aren't set
+          const hasRequiredData = !!(
+            user.name &&
+            user.name.trim().length > 0 &&
+            preferences &&
+            preferences.fitness_goals &&
+            preferences.fitness_goals.length > 0 &&
+            preferences.experience_level &&
+            preferences.experience_level.trim().length > 0 &&
+            preferences.workout_frequency &&
+            preferences.workout_frequency.trim().length > 0
+          );
+
+          if (!hasRequiredData) {
+            navigate("/onboarding");
+            return;
+          }
         }
       } catch (error) {
-        // If check fails, assume onboarding is needed for safety
+        // If check fails, redirect to onboarding for safety
         navigate("/onboarding");
         return;
       }
@@ -60,26 +81,20 @@ export default function Chat() {
     checkOnboarding();
   }, [navigate]);
 
-  // Don't render chat until onboarding check is complete
-  if (!onboardingCheckDone) {
-    return (
-      <ProtectedRoute>
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-          <div className="text-center">
-            <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-gray-600 dark:text-gray-400">
-              Memeriksa setup profile...
-            </p>
-          </div>
-        </div>
-      </ProtectedRoute>
-    );
-  }
+  // Auto-scroll to bottom when messages change
+  React.useEffect(() => {
+    if (listRef.current) {
+      const scrollContainer = listRef.current;
+      setTimeout(() => {
+        scrollContainer.scrollTop = scrollContainer.scrollHeight;
+      }, 0);
+    }
+  }, [messages, isSending]);
 
   // Example chat prompts for users
   const examplePrompts = [
     "Kenapa pegal-pegal setelah angkat beban terjadi?",
-    "Berapa protein yang diperlukan untuk membangun otot?",
+    "Berapa protein yang diperlukan untuk membangun otot perhari?",
     "Berapa lama latihan yang efektif?",
     "Gerakan apa yang harus dilakukan untuk membentuk otot?",
     "Berapa banyak makanan yang harus dikonsumsi setelah latihan?",
@@ -87,72 +102,8 @@ export default function Chat() {
     "Berapa lama istirahat yang dibutuhkan antar set latihan?",
     "Kenapa saya harus latihan fisik?",
     "Kenapa seiring usia kemampuan fisik saya berkurang?",
-    "Kenapa leg day itu penting?",
+    "Kenapa latihan kaki itu penting?",
   ];
-
-  React.useEffect(() => {
-    listRef.current?.scrollTo({
-      top: listRef.current.scrollHeight,
-      behavior: "smooth",
-    });
-  }, [messages.length]);
-
-  // Loading step progression effect
-  React.useEffect(() => {
-    if (!isSending) {
-      setLoadingStep(0);
-      setFunnyMessage("");
-      return;
-    }
-
-    const funnyMessages = [
-      "💪 Melatih otot otak saya...",
-      "🏋️‍♀️ Mengangkat beban mental...",
-      "🧠 Neuron saya sedang kardio...",
-      "📚 Berkonsultasi dengan pelatih pribadi virtual...",
-      "🔬 Mencampur sains dengan sedikit sihir...",
-      "⚡ Mengisi baterai pengetahuan saya...",
-      "🎯 Membidik jawaban yang sempurna...",
-      "🌟 Menyalurkan guru fitness dalam diri saya...",
-    ];
-
-    const steps = [
-      { step: 1, delay: 0, message: "Hmm, mari saya pikirkan..." },
-      {
-        step: 2,
-        delay: 600,
-        message: "Mencari di pengetahuan fitness saya...",
-      },
-      {
-        step: 3,
-        delay: 1000,
-        message: "Hampir selesai, sedang memoles jawaban!",
-      },
-    ];
-
-    // Set initial funny message
-    setFunnyMessage(
-      funnyMessages[Math.floor(Math.random() * funnyMessages.length)]
-    );
-
-    // Rotate funny messages every 400ms
-    const messageInterval = setInterval(() => {
-      setFunnyMessage(
-        funnyMessages[Math.floor(Math.random() * funnyMessages.length)]
-      );
-    }, 400);
-
-    steps.forEach(({ step, delay, message }) => {
-      const timer = setTimeout(() => {
-        setLoadingStep(step);
-      }, delay);
-      return () => clearTimeout(timer);
-    });
-
-    return () => {
-      clearInterval(messageInterval);
-    };
-  }, [isSending]);
 
   const handleSendMessage = async (message: string) => {
     const userMessage: ChatMessage = { role: "user", text: message };
@@ -161,20 +112,63 @@ export default function Chat() {
     setIsSending(true);
 
     try {
-      const response = await queryKnowledgeBase({
-        question: message,
-      });
+      if (useVanillaMode) {
+        // Use Vanilla LLM endpoint
+        const vanillaRequest: VanillaQueryRequest = { text: message };
+        const vanillaResponse = await queryVanilla(vanillaRequest);
 
-      // Use the formatted answer from paperqa_session if available, otherwise fall back to answer
-      const botText =
-        response?.answer ?? "Sorry, I could not generate a response.";
+        const botText =
+          vanillaResponse?.answer ?? "Sorry, I could not generate a response.";
 
-      const botMessage: ChatMessage = {
-        role: "bot",
-        text: botText,
-        response: response,
-      };
-      setMessages((prev) => [...prev, botMessage]);
+        // Convert vanilla response to QueryResponse-like structure for display
+        const botMessage: ChatMessage = {
+          role: "bot",
+          text: botText,
+          response: {
+            answer: botText,
+            sources: null,
+            context: "",
+            confidence: null,
+            query: message,
+            status: vanillaResponse?.status === "success",
+            paperqa_session: {
+              id: "",
+              question: message,
+              answer: botText,
+              raw_answer: botText,
+              answer_reasoning: null,
+              has_successful_answer: true,
+              context: "",
+              contexts: [],
+              references: "",
+              formatted_answer: botText,
+              graded_answer: null,
+              cost: 0,
+              token_counts: {},
+              config_md5: "",
+              tool_history: [],
+              used_contexts: [],
+            },
+          },
+        };
+        setMessages((prev) => [...prev, botMessage]);
+      } else {
+        // Use RAG endpoint
+        const response = await queryKnowledgeBase({
+          question: message,
+        });
+
+        // Use the formatted answer from paperqa_session if available, otherwise fall back to answer
+        const botText =
+          response?.answer ?? "Sorry, I could not generate a response.";
+
+        const botMessage: ChatMessage = {
+          role: "bot",
+          text: botText,
+          response: response,
+        };
+        setMessages((prev) => [...prev, botMessage]);
+      }
     } catch (error) {
       console.error("API Error:", error);
       const botMessage: ChatMessage = {
@@ -206,13 +200,13 @@ export default function Chat() {
     handleSendMessage(prompt);
   };
 
-  const toggleReferencesDropdown = (messageIndex: number) => {
+  const toggleReferencesDropdown = (refId: string) => {
     setExpandedReferences((prev) => {
       const newSet = new Set(prev);
-      if (newSet.has(messageIndex)) {
-        newSet.delete(messageIndex);
+      if (newSet.has(refId)) {
+        newSet.delete(refId);
       } else {
-        newSet.add(messageIndex);
+        newSet.add(refId);
       }
       return newSet;
     });
@@ -242,8 +236,6 @@ export default function Chat() {
       paperqa_session?.contexts?.filter(
         (context) => !usedContextIds.has(context.id)
       ) || [];
-
-    const isExpanded = expandedReferences.has(messageIndex);
 
     // Convert citation keys to numbers for better readability
     const processedAnswerText = convertCitationKeysToNumbers(
@@ -310,179 +302,55 @@ export default function Chat() {
                 <div className="text-xs font-medium text-gray-600 dark:text-gray-400">
                   Referensi Utama ({usedContexts.length})
                 </div>
-                {usedContexts.map((context, index) => (
-                  <div
-                    key={context.id}
-                    id={`ref-${messageIndex}-${index + 1}`}
-                    className="border-l-2 border-blue-200 dark:border-blue-800 pl-3 py-3 bg-blue-50/50 dark:bg-blue-950/20 rounded-r-md scroll-mt-20"
-                  >
-                    <div className="space-y-2">
-                      {/* Reference Number and Title */}
-                      <div className="text-xs text-gray-600 dark:text-gray-400">
-                        <span className="font-medium text-blue-600 dark:text-blue-400">
-                          [{index + 1}]
-                        </span>
-                        <span className="ml-2 font-semibold">
-                          {context.text.doc.title}
-                        </span>
-                      </div>
+                {usedContexts.map((context, index) => {
+                  const refId = `ref-${messageIndex}-used-${context.id}`;
+                  const isRefExpanded = expandedReferences.has(refId);
 
-                      {/* Authors */}
-                      {context.text.doc.authors &&
-                        context.text.doc.authors.length > 0 && (
-                          <div className="text-xs text-gray-500 dark:text-gray-500">
-                            <span className="font-medium">Penulis:</span>{" "}
-                            {context.text.doc.authors.join(", ")}
-                          </div>
-                        )}
-
-                      {/* Publication Details */}
-                      <div className="text-xs text-gray-600 dark:text-gray-400">
-                        <span className="font-medium">Diterbitkan:</span>{" "}
-                        {context.text.doc.year}
-                        {context.text.doc.journal && (
-                          <span className="ml-2">
-                            <span className="font-medium">di</span>{" "}
-                            <em>{context.text.doc.journal}</em>
-                          </span>
-                        )}
-                        {context.text.doc.volume && (
-                          <span className="ml-1">
-                            Vol. {context.text.doc.volume}
-                          </span>
-                        )}
-                        {context.text.doc.issue && (
-                          <span className="ml-1">
-                            No. {context.text.doc.issue}
-                          </span>
-                        )}
-                        {context.text.doc.pages && (
-                          <span className="ml-1">
-                            hlm. {context.text.doc.pages}
-                          </span>
-                        )}
-                        {/* Show extracted page numbers from context name */}
-                        {extractPageNumbers(context.text.name) && (
-                          <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 rounded text-xs font-medium">
-                            Context: pp. {extractPageNumbers(context.text.name)}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* DOI and Links */}
-                      {context.text.doc.doi && (
-                        <div className="text-xs text-gray-600 dark:text-gray-400">
-                          <span className="font-medium">DOI:</span>
-                          <a
-                            href={context.text.doc.doi_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="ml-1 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline"
-                          >
-                            {context.text.doc.doi}
-                          </a>
-                        </div>
-                      )}
-
-                      {/* Citation Count and Quality */}
-                      {context.text.doc.citation_count && (
-                        <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-500">
-                          <div>
-                            <span className="font-medium">Skor Relevansi:</span>
-                            <span className="ml-1 font-semibold text-blue-600 dark:text-blue-400">
-                              {context.score}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="font-medium">Kutipan:</span>
-                            <span className="ml-1">
-                              {context.text.doc.citation_count ?? 0}
-                            </span>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Publisher and ISSN */}
-                      {(context.text.doc.publisher ||
-                        context.text.doc.issn) && (
-                        <div className="text-xs text-gray-500 dark:text-gray-500">
-                          {context.text.doc.publisher && (
-                            <span>
-                              <span className="font-medium">Penerbit:</span>{" "}
-                              {context.text.doc.publisher}
-                            </span>
-                          )}
-                          {context.text.doc.issn && (
-                            <span className="ml-4">
-                              <span className="font-medium">ISSN:</span>{" "}
-                              {context.text.doc.issn}
-                            </span>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Context Content */}
-                      <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-md border-l-2 border-blue-200 dark:border-blue-700">
-                        <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          Konten Konteks:
-                        </div>
-                        <div className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
-                          {context.context}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Other Contexts - In dropdown */}
-            {otherContexts.length > 0 && (
-              <div className="space-y-2">
-                <button
-                  onClick={() => toggleReferencesDropdown(messageIndex)}
-                  className="flex items-center gap-2 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
-                  aria-expanded={isExpanded}
-                >
-                  <span>Referensi Tambahan ({otherContexts.length})</span>
-                  <svg
-                    className={`w-3 h-3 transition-transform ${
-                      isExpanded ? "rotate-180" : ""
-                    }`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 9l-7 7-7-7"
-                    />
-                  </svg>
-                </button>
-
-                {isExpanded && (
-                  <div className="space-y-3 pl-2">
-                    {otherContexts.map((context, index) => (
-                      <div
-                        key={context.id}
-                        id={`ref-${messageIndex}-${
-                          usedContexts.length + index + 1
-                        }`}
-                        className="border-l-2 border-gray-200 dark:border-gray-700 pl-3 py-3 bg-gray-50/50 dark:bg-gray-950/20 rounded-r-md scroll-mt-20"
+                  return (
+                    <div
+                      key={context.id}
+                      id={`ref-${messageIndex}-${index + 1}`}
+                      className="border-l-2 border-blue-200 dark:border-blue-800 rounded-r-md overflow-hidden scroll-mt-20"
+                    >
+                      {/* Collapsible Title Header */}
+                      <button
+                        onClick={() => toggleReferencesDropdown(refId)}
+                        className="w-full flex items-start justify-between p-1 bg-blue-50/50 dark:bg-blue-950/20 hover:bg-blue-100/50 dark:hover:bg-blue-900/30 transition-colors text-left"
+                        aria-expanded={isRefExpanded}
                       >
-                        <div className="space-y-2">
-                          {/* Reference Number and Title */}
-                          <div className="text-xs text-gray-600 dark:text-gray-400">
-                            <span className="font-medium text-gray-600 dark:text-gray-400">
-                              [{usedContexts.length + index + 1}]
+                        <div className="flex-1 pr-3">
+                          <div className="flex items-baseline gap-2">
+                            <span className="text-xs text-blue-600 dark:text-blue-400 flex-shrink-0">
+                              [{index + 1}]
                             </span>
-                            <span className="ml-2 font-semibold">
+                            <span className="text-xs text-gray-700 dark:text-gray-300 line-clamp-2">
                               {context.text.doc.title}
                             </span>
                           </div>
+                        </div>
+                        <svg
+                          className={`w-4 h-4 transition-transform flex-shrink-0 mt-0.5 text-gray-600 dark:text-gray-400`}
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          style={{
+                            transform: isRefExpanded
+                              ? "rotate(180deg)"
+                              : "rotate(0deg)",
+                          }}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 9l-7 7-7-7"
+                          />
+                        </svg>
+                      </button>
 
+                      {/* Collapsible Content */}
+                      {isRefExpanded && (
+                        <div className="px-3 py-3 bg-blue-50/30 dark:bg-blue-950/10 space-y-2 border-t border-blue-200 dark:border-blue-800">
                           {/* Authors */}
                           {context.text.doc.authors &&
                             context.text.doc.authors.length > 0 && (
@@ -519,8 +387,8 @@ export default function Chat() {
                             )}
                             {/* Show extracted page numbers from context name */}
                             {extractPageNumbers(context.text.name) && (
-                              <span className="ml-2 px-2 py-1 bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400 rounded text-xs font-medium">
-                                Konteks: hlm.{" "}
+                              <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 rounded text-xs font-medium">
+                                Context: pp.{" "}
                                 {extractPageNumbers(context.text.name)}
                               </span>
                             )}
@@ -542,22 +410,24 @@ export default function Chat() {
                           )}
 
                           {/* Citation Count and Quality */}
-                          <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-500">
-                            <div>
-                              <span className="font-medium">
-                                Relevance Score:
-                              </span>
-                              <span className="ml-1 font-semibold text-gray-600 dark:text-gray-400">
-                                {context.score}
-                              </span>
+                          {context.text.doc.citation_count && (
+                            <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-500">
+                              <div>
+                                <span className="font-medium">
+                                  Skor Relevansi:
+                                </span>
+                                <span className="ml-1 font-semibold text-blue-600 dark:text-blue-400">
+                                  {context.score}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="font-medium">Kutipan:</span>
+                                <span className="ml-1">
+                                  {context.text.doc.citation_count ?? 0}
+                                </span>
+                              </div>
                             </div>
-                            <div>
-                              <span className="font-medium">Kutipan:</span>
-                              <span className="ml-1">
-                                {context.text.doc.citation_count ?? 0}
-                              </span>
-                            </div>
-                          </div>
+                          )}
 
                           {/* Publisher and ISSN */}
                           {(context.text.doc.publisher ||
@@ -565,9 +435,7 @@ export default function Chat() {
                             <div className="text-xs text-gray-500 dark:text-gray-500">
                               {context.text.doc.publisher && (
                                 <span>
-                                  <span className="font-medium">
-                                    Publisher:
-                                  </span>{" "}
+                                  <span className="font-medium">Penerbit:</span>{" "}
                                   {context.text.doc.publisher}
                                 </span>
                               )}
@@ -580,18 +448,229 @@ export default function Chat() {
                             </div>
                           )}
 
-                          {/* Context Content */}
-                          <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-md border-l-2 border-gray-200 dark:border-gray-700">
+                          {/* Context Content - Always Visible */}
+                          <div className="mt-2 bg-white dark:bg-gray-800/50 rounded-md border border-blue-200 dark:border-blue-700 p-3">
                             <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
-                              Context Content:
+                              Penggalan Konteks:
                             </div>
                             <div className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
                               {context.context}
                             </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Other Contexts - In dropdown */}
+            {otherContexts.length > 0 && (
+              <div className="space-y-2">
+                <button
+                  onClick={() =>
+                    toggleReferencesDropdown(
+                      `ref-${messageIndex}-other-dropdown`
+                    )
+                  }
+                  className="flex items-center gap-2 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+                  aria-expanded={expandedReferences.has(
+                    `ref-${messageIndex}-other-dropdown`
+                  )}
+                >
+                  <span>Referensi Tambahan ({otherContexts.length})</span>
+                  <svg
+                    className={`w-3 h-3 transition-transform ${
+                      expandedReferences.has(
+                        `ref-${messageIndex}-other-dropdown`
+                      )
+                        ? "rotate-180"
+                        : ""
+                    }`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </button>
+
+                {expandedReferences.has(
+                  `ref-${messageIndex}-other-dropdown`
+                ) && (
+                  <div className="space-y-3 pl-2">
+                    {otherContexts.map((context, index) => {
+                      const refId = `ref-${messageIndex}-other-${context.id}`;
+                      const isRefExpanded = expandedReferences.has(refId);
+
+                      return (
+                        <div
+                          key={context.id}
+                          id={`ref-${messageIndex}-${
+                            usedContexts.length + index + 1
+                          }`}
+                          className="border-l-2 border-gray-200 dark:border-gray-700 rounded-r-md overflow-hidden scroll-mt-20"
+                        >
+                          {/* Collapsible Title Header */}
+                          <button
+                            onClick={() => toggleReferencesDropdown(refId)}
+                            className="w-full flex items-start justify-between p-3 bg-gray-50/50 dark:bg-gray-950/20 hover:bg-gray-100/50 dark:hover:bg-gray-900/30 transition-colors text-left"
+                            aria-expanded={isRefExpanded}
+                          >
+                            <div className="flex-1 pr-3">
+                              <div className="flex items-baseline gap-2">
+                                <span className="font-medium text-gray-600 dark:text-gray-400 flex-shrink-0">
+                                  [{usedContexts.length + index + 1}]
+                                </span>
+                                <span className="font-semibold text-sm text-gray-700 dark:text-gray-300 line-clamp-2">
+                                  {context.text.doc.title}
+                                </span>
+                              </div>
+                            </div>
+                            <svg
+                              className={`w-4 h-4 transition-transform flex-shrink-0 mt-0.5 text-gray-600 dark:text-gray-400`}
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                              style={{
+                                transform: isRefExpanded
+                                  ? "rotate(180deg)"
+                                  : "rotate(0deg)",
+                              }}
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M19 9l-7 7-7-7"
+                              />
+                            </svg>
+                          </button>
+
+                          {/* Collapsible Content */}
+                          {isRefExpanded && (
+                            <div className="px-3 py-3 bg-gray-50/30 dark:bg-gray-950/10 space-y-2 border-t border-gray-200 dark:border-gray-700">
+                              {/* Authors */}
+                              {context.text.doc.authors &&
+                                context.text.doc.authors.length > 0 && (
+                                  <div className="text-xs text-gray-500 dark:text-gray-500">
+                                    <span className="font-medium">
+                                      Penulis:
+                                    </span>{" "}
+                                    {context.text.doc.authors.join(", ")}
+                                  </div>
+                                )}
+
+                              {/* Publication Details */}
+                              <div className="text-xs text-gray-600 dark:text-gray-400">
+                                <span className="font-medium">
+                                  Diterbitkan:
+                                </span>{" "}
+                                {context.text.doc.year}
+                                {context.text.doc.journal && (
+                                  <span className="ml-2">
+                                    <span className="font-medium">di</span>{" "}
+                                    <em>{context.text.doc.journal}</em>
+                                  </span>
+                                )}
+                                {context.text.doc.volume && (
+                                  <span className="ml-1">
+                                    Vol. {context.text.doc.volume}
+                                  </span>
+                                )}
+                                {context.text.doc.issue && (
+                                  <span className="ml-1">
+                                    No. {context.text.doc.issue}
+                                  </span>
+                                )}
+                                {context.text.doc.pages && (
+                                  <span className="ml-1">
+                                    hlm. {context.text.doc.pages}
+                                  </span>
+                                )}
+                                {/* Show extracted page numbers from context name */}
+                                {extractPageNumbers(context.text.name) && (
+                                  <span className="ml-2 px-2 py-1 bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400 rounded text-xs font-medium">
+                                    Konteks: hlm.{" "}
+                                    {extractPageNumbers(context.text.name)}
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* DOI and Links */}
+                              {context.text.doc.doi && (
+                                <div className="text-xs text-gray-600 dark:text-gray-400">
+                                  <span className="font-medium">DOI:</span>
+                                  <a
+                                    href={context.text.doc.doi_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="ml-1 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline"
+                                  >
+                                    {context.text.doc.doi}
+                                  </a>
+                                </div>
+                              )}
+
+                              {/* Citation Count and Quality */}
+                              <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-500">
+                                <div>
+                                  <span className="font-medium">
+                                    Skor Relevansi:
+                                  </span>
+                                  <span className="ml-1 font-semibold text-gray-600 dark:text-gray-400">
+                                    {context.score}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="font-medium">Kutipan:</span>
+                                  <span className="ml-1">
+                                    {context.text.doc.citation_count ?? 0}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Publisher and ISSN */}
+                              {(context.text.doc.publisher ||
+                                context.text.doc.issn) && (
+                                <div className="text-xs text-gray-500 dark:text-gray-500">
+                                  {context.text.doc.publisher && (
+                                    <span>
+                                      <span className="font-medium">
+                                        Penerbit:
+                                      </span>{" "}
+                                      {context.text.doc.publisher}
+                                    </span>
+                                  )}
+                                  {context.text.doc.issn && (
+                                    <span className="ml-4">
+                                      <span className="font-medium">ISSN:</span>{" "}
+                                      {context.text.doc.issn}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Context Content - Always Visible */}
+                              <div className="mt-2 bg-white dark:bg-gray-800/50 rounded-md border border-gray-200 dark:border-gray-700 p-3">
+                                <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                  Penggalan Konteks:
+                                </div>
+                                <div className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                                  {context.context}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -602,25 +681,34 @@ export default function Chat() {
     );
   };
 
+  // Don't render chat until onboarding check is complete
+  if (!onboardingCheckDone) {
+    return (
+      <ProtectedRoute>
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-600 dark:text-gray-400">
+              Memeriksa setup profile...
+            </p>
+          </div>
+        </div>
+      </ProtectedRoute>
+    );
+  }
+
   return (
     <ProtectedRoute>
-      <main className="mx-auto flex h-dvh max-h-dvh w-full max-w-4xl flex-col p-4 scroll-smooth">
-        <header className="flex items-center justify-between gap-2 border-b border-gray-200 pb-3 dark:border-gray-800">
-          <h1 className="text-lg font-semibold">Chatbot Fitness</h1>
-          <span className="text-xs text-gray-500">
-            Didukung oleh makalah ilmiah
-          </span>
-        </header>
-
+      <main className="mx-auto flex min-h-[80vh] w-full max-w-4xl flex-col p-4 scroll-smooth">
         <section
           ref={listRef}
           aria-label="Chat conversation"
           className="mt-4 flex-1 space-y-3 overflow-y-auto rounded-md border border-gray-200 p-3 dark:border-gray-800"
         >
           {messages.length === 0 ? (
-            <div className="flex h-full items-center justify-center text-sm text-gray-500">
+            <div className="flex h-full items-center justify-center py-12 text-sm text-gray-500">
               <div className="text-center space-y-2">
-                <p>Selamat datang di Chatbot Fitness! 🤖💪</p>
+                <p>Selamat datang di KochAI! 🤖💪</p>
                 <p>Tanyakan apa saja tentang:</p>
                 <div className="flex flex-wrap justify-center gap-2 text-xs">
                   <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
@@ -671,38 +759,30 @@ export default function Chat() {
           {isSending && (
             <div className="flex justify-start">
               <div className="max-w-[90%] rounded-2xl bg-gray-100 px-4 py-3 text-gray-900 dark:bg-gray-900 dark:text-gray-100 flex gap-3">
-                <div className="space-y-3">
+                <div className="space-x-3 flex">
                   {/* Funny Messages */}
-                  {funnyMessage && (
-                    <div className="flex items-center justify-center py-1">
-                      <div className="text-xs text-gray-500 dark:text-gray-400 animate-pulse">
-                        {funnyMessage}
-                      </div>
-                    </div>
-                  )}
-
+                  <div className="animate-pulse text-gray-500 text-xs">
+                    Sedang memproses pesan, tunggu sebentar...
+                  </div>
                   {/* Animated Dots for Visual Appeal */}
                   <div className="flex items-center justify-center gap-1">
                     <span className="h-1 w-1 animate-pulse rounded-full bg-blue-500 [animation-delay:0ms]" />
                     <span className="h-1 w-1 animate-pulse rounded-full bg-blue-500 [animation-delay:150ms]" />
                     <span className="h-1 w-1 animate-pulse rounded-full bg-blue-500 [animation-delay:300ms]" />
                     <span className="ml-2 text-xs text-gray-400">💭</span>
-                    <span className="sr-only">Memproses permintaan Anda</span>
                   </div>
                 </div>
               </div>
             </div>
           )}
-        </section>
 
-        {/* Example Chat Prompts */}
-        {messages.length <= 1 && !isSending && (
-          <div className="mt-3 mb-3">
-            <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">
-              Coba tanyakan:
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {examplePrompts.map((prompt, index) => (
+          {/* Example Prompts */}
+          {messages.length === 0 && (
+            <div className="flex flex-wrap gap-2 justify-center pt-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="text-xs text-gray-500 dark:text-gray-400 mb-2 w-full text-center">
+                Coba tanyakan:
+              </div>
+              {examplePrompts.slice(0, 6).map((prompt, index) => (
                 <button
                   key={index}
                   onClick={() => handleExampleClick(prompt)}
@@ -712,26 +792,51 @@ export default function Chat() {
                 </button>
               ))}
             </div>
+          )}
+        </section>
+
+        {/* Mode Switcher */}
+        <div className="mt-3 flex items-center justify-center px-4">
+          <div className="flex items-center gap-3 px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-full border border-gray-200 dark:border-gray-700">
+            <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+              {useVanillaMode ? "🤖 Vanilla LLM" : "📚 RAG Mode"}
+            </span>
+            <button
+              type="button"
+              onClick={() => setUseVanillaMode(!useVanillaMode)}
+              className="relative inline-flex h-6 w-11 items-center rounded-full bg-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              aria-label="Toggle between RAG and Vanilla LLM mode"
+              aria-pressed={useVanillaMode}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  useVanillaMode ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
+            </button>
+            <span className="text-xs text-gray-600 dark:text-gray-400">
+              {useVanillaMode ? "Off RAG" : "With RAG"}
+            </span>
           </div>
-        )}
+        </div>
 
         <form
           onSubmit={handleSubmit}
-          className="mt-3 flex items-center gap-2"
-          aria-label="Message input form"
+          className="mt-3 flex items-center border border-gray-200 gap-2 sticky bottom-6 p-4 bg-white rounded-full"
+          aria-label="Form input pertanyaan"
         >
           <input
             value={inputValue}
             onChange={handleChange}
-            placeholder="Ketik pesan Anda..."
+            placeholder="Ketik pertanyaan..."
             aria-label="Input pesan"
-            className="flex-1 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm outline-none ring-0 placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-800 dark:bg-gray-950"
+            className="flex-1 border-gray-200 bg-white px-3 py-2 text-sm outline-none ring-0 placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-800 dark:bg-gray-950"
           />
           <button
             type="submit"
-            aria-label="Kirim pesan"
+            aria-label="kI"
             disabled={isSending || inputValue.trim().length === 0}
-            className="inline-flex items-center justify-center whitespace-nowrap rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center justify-center whitespace-nowrap rounded-full bg-blue-600 px-3 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Kirim
           </button>

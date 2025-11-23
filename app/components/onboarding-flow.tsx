@@ -40,10 +40,7 @@ export function OnboardingFlow() {
   const [error, setError] = useState<string>("");
 
   const [profileData, setProfileData] = useState<UserProfileUpdate>({
-    name: "",
     bio: "",
-    location: "",
-    website: "",
   });
 
   const [preferencesData, setPreferencesData] = useState<UserPreferences>({
@@ -67,12 +64,24 @@ export function OnboardingFlow() {
   // Initialize raw inputs when component mounts or when preferences change
   React.useEffect(() => {
     setRawInputs({
-      available_equipment:
-        preferencesData.available_equipment?.join(", ") || "",
-      dietary_restrictions:
-        preferencesData.dietary_restrictions?.join(", ") || "",
+      available_equipment: preferencesData.available_equipment?.[0] || "", // Take first element as single string
+      dietary_restrictions: preferencesData.dietary_restrictions?.[0] || "", // Take first element as single string
     });
   }, [
+    preferencesData.available_equipment,
+    preferencesData.dietary_restrictions,
+  ]);
+
+  // Also initialize when the step changes to preferences
+  React.useEffect(() => {
+    if (currentStep === "preferences") {
+      setRawInputs({
+        available_equipment: preferencesData.available_equipment?.[0] || "", // Take first element as single string
+        dietary_restrictions: preferencesData.dietary_restrictions?.[0] || "", // Take first element as single string
+      });
+    }
+  }, [
+    currentStep,
     preferencesData.available_equipment,
     preferencesData.dietary_restrictions,
   ]);
@@ -112,7 +121,9 @@ export function OnboardingFlow() {
     }
   };
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
+    // Refresh user data to ensure onboarding completion is reflected
+    await refreshUser();
     navigate("/chat");
   };
 
@@ -126,7 +137,33 @@ export function OnboardingFlow() {
     (field: keyof UserPreferences) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
       const inputValue = e.target.value;
-      setRawInputs((prev) => ({ ...prev, [field]: inputValue }));
+
+      // Update raw inputs for text fields
+      if (field === "available_equipment" || field === "dietary_restrictions") {
+        setRawInputs((prev) => ({ ...prev, [field]: inputValue }));
+
+        // For both equipment and dietary restrictions, treat as single string (no comma splitting)
+        setPreferencesData((prev) => ({
+          ...prev,
+          [field]: inputValue ? [inputValue] : [],
+        }));
+      } else {
+        // For select elements, update preferencesData directly
+        if (field === "fitness_goals") {
+          // fitness_goals is an array, but UI treats it as single selection
+          const newValue = inputValue ? [inputValue] : [];
+          setPreferencesData((prev) => ({
+            ...prev,
+            [field]: newValue,
+          }));
+        } else {
+          // For other select fields (experience_level, workout_frequency)
+          setPreferencesData((prev) => ({
+            ...prev,
+            [field]: inputValue || "",
+          }));
+        }
+      }
     };
 
   const currentStepIndex = steps.findIndex((step) => step.id === currentStep);
@@ -140,7 +177,7 @@ export function OnboardingFlow() {
           <div className="mb-8">
             <div className="flex justify-between items-center mb-4">
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                Selamat Datang di Fitness Chatbot!
+                Selamat Datang di KochAI!
               </h1>
               <span className="text-sm text-gray-600 dark:text-gray-400">
                 {currentStepIndex + 1} dari {steps.length}
@@ -182,19 +219,6 @@ export function OnboardingFlow() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Nama Lengkap
-                </label>
-                <input
-                  type="text"
-                  value={profileData.name || user?.name || ""}
-                  onChange={handleProfileChange("name")}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors"
-                  placeholder="Nama lengkap Anda"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Bio (Opsional)
                 </label>
                 <textarea
@@ -203,32 +227,6 @@ export function OnboardingFlow() {
                   rows={3}
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors"
                   placeholder="Ceritakan tentang diri Anda..."
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Lokasi (Opsional)
-                </label>
-                <input
-                  type="text"
-                  value={profileData.location || ""}
-                  onChange={handleProfileChange("location")}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors"
-                  placeholder="Kota, Negara"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Website (Opsional)
-                </label>
-                <input
-                  type="url"
-                  value={profileData.website || ""}
-                  onChange={handleProfileChange("website")}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors"
-                  placeholder="https://website.com"
                 />
               </div>
 
@@ -323,7 +321,7 @@ export function OnboardingFlow() {
                   value={rawInputs.available_equipment}
                   onChange={handlePreferenceChange("available_equipment")}
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors"
-                  placeholder="Dumbbell, barbell, treadmill (pisahkan dengan koma)"
+                  placeholder="Contoh: Dumbbell atau treadmill"
                 />
               </div>
 
@@ -336,7 +334,7 @@ export function OnboardingFlow() {
                   value={rawInputs.dietary_restrictions}
                   onChange={handlePreferenceChange("dietary_restrictions")}
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors"
-                  placeholder="Vegetarian, alergi kacang (pisahkan dengan koma)"
+                  placeholder="Contoh: Vegetarian atau alergi kacang"
                 />
               </div>
 

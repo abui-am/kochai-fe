@@ -2,7 +2,10 @@ import React from "react";
 import type { Route } from "./+types/home";
 import { useAuth } from "~/contexts/auth-context";
 import { useNavigate } from "react-router";
-import { checkOnboardingComplete } from "~/services/fitness-api";
+import {
+  checkOnboardingComplete,
+  fetchUserProfile,
+} from "~/services/fitness-api";
 import logoDark from "../welcome/logo-dark.svg";
 import logoLight from "../welcome/logo-light.svg";
 
@@ -30,7 +33,28 @@ export default function Home() {
           if (isComplete) {
             navigate("/chat");
           } else {
-            navigate("/onboarding");
+            // Double-check by fetching profile data directly
+            const profileResponse = await fetchUserProfile();
+            const { user, preferences } = profileResponse;
+
+            // If user has provided required data, allow access even if status flags aren't set
+            const hasRequiredData = !!(
+              user.name &&
+              user.name.trim().length > 0 &&
+              preferences &&
+              preferences.fitness_goals &&
+              preferences.fitness_goals.length > 0 &&
+              preferences.experience_level &&
+              preferences.experience_level.trim().length > 0 &&
+              preferences.workout_frequency &&
+              preferences.workout_frequency.trim().length > 0
+            );
+
+            if (hasRequiredData) {
+              navigate("/chat");
+            } else {
+              navigate("/onboarding");
+            }
           }
         } catch (error) {
           // If check fails, redirect to onboarding for safety
@@ -88,13 +112,13 @@ export default function Home() {
 
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                 <button
-                  onClick={() => navigate("/login")}
+                  onClick={() => navigate("/")}
                   className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-lg transition-colors duration-200"
                 >
                   Mulai Chat Sekarang
                 </button>
                 <button
-                  onClick={() => navigate("/login")}
+                  onClick={() => navigate("/")}
                   className="text-blue-600 hover:text-blue-700 dark:text-blue-400 font-medium py-3 px-8 rounded-lg border border-blue-600 dark:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
                 >
                   Pelajari Lebih Lanjut
