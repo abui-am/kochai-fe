@@ -93,16 +93,17 @@ export default function Chat() {
 
   // Example chat prompts for users
   const examplePrompts = [
+    "Berapa lama durasi latihan yang efektif?",
     "Kenapa pegal-pegal setelah angkat beban terjadi?",
-    "Berapa protein yang diperlukan untuk membangun otot perhari?",
-    "Berapa lama latihan yang efektif?",
+    "Berapa lama waktu tidur yang baik untuk membentuk otot?",
     "Gerakan apa yang harus dilakukan untuk membentuk otot?",
-    "Berapa banyak makanan yang harus dikonsumsi setelah latihan?",
-    "Apa itu set dan repetisi?",
-    "Berapa lama istirahat yang dibutuhkan antar set latihan?",
-    "Kenapa saya harus latihan fisik?",
-    "Kenapa seiring usia kemampuan fisik saya berkurang?",
+    "Berapa lama sampai saat saya melihat progres latihan saya?",
+
     "Kenapa latihan kaki itu penting?",
+    "Cara mengobati pegal pegal setelah latihan",
+    "Berapa banyak jumlah protein yang perlu dikonsumsi setiap hari?",
+    "Kenapa saya harus latihan fisik untuk menjadi bugar?",
+    "Kenapa seiring usia kemampuan fisik saya berkurang?",
   ];
 
   const handleSendMessage = async (message: string) => {
