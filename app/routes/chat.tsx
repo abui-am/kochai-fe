@@ -763,7 +763,7 @@ export default function Chat() {
                 <div className="space-x-3 flex">
                   {/* Funny Messages */}
                   <div className="animate-pulse text-gray-500 text-xs">
-                    Sedang memproses pesan, tunggu sebentar...
+                    Sedang mencari jawaban, tunggu sebentar...
                   </div>
                   {/* Animated Dots for Visual Appeal */}
                   <div className="flex items-center justify-center gap-1">
