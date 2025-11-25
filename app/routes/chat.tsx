@@ -12,6 +12,7 @@ import {
 import { marked } from "marked";
 import { ProtectedRoute } from "~/components/protected-route";
 import { useNavigate } from "react-router";
+import { useAuth } from "~/contexts/auth-context";
 
 interface ChatMessage {
   role: "user" | "bot";
@@ -41,7 +42,7 @@ export default function Chat() {
     React.useState<boolean>(false);
   const listRef = React.useRef<HTMLDivElement | null>(null);
   const navigate = useNavigate();
-
+  const { user } = useAuth();
   // Check if user needs to complete onboarding
   React.useEffect(() => {
     const checkOnboarding = async () => {
@@ -93,7 +94,7 @@ export default function Chat() {
 
   // Example chat prompts for users
   const examplePrompts = [
-    "Berapa lama durasi latihan yang efektif?",
+    "Berapa lama durasi latihan yang efektif persesi?",
     "Kenapa pegal-pegal setelah angkat beban terjadi?",
     "Berapa lama waktu tidur yang baik untuk membentuk otot?",
     "Gerakan apa yang harus dilakukan untuk membentuk otot?",
@@ -700,16 +701,20 @@ export default function Chat() {
 
   return (
     <ProtectedRoute>
-      <main className="mx-auto flex min-h-[80vh] w-full max-w-4xl flex-col p-4 scroll-smooth">
+      <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col p-4 scroll-smooth relative">
         <section
           ref={listRef}
           aria-label="Chat conversation"
-          className="mt-4 flex-1 space-y-3 overflow-y-auto rounded-md border border-gray-200 p-3 dark:border-gray-800"
+          className="mt-20 flex-1 space-y-3 overflow-y-auto rounded-md border border-gray-200 p-3 dark:border-gray-800"
         >
           {messages.length === 0 ? (
             <div className="flex h-full items-center justify-center py-12 text-sm text-gray-500">
               <div className="text-center space-y-2">
-                <p>Selamat datang di KochAI! 🤖💪</p>
+                <p>Halo {user?.name}! 🤖💪</p>
+                <p>
+                  Selamat datang di KochAI, Saya Kochi sebagai pelatih virtual
+                  kamu!
+                </p>
                 <p>Tanyakan apa saja tentang:</p>
                 <div className="flex flex-wrap justify-center gap-2 text-xs">
                   <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
@@ -722,9 +727,6 @@ export default function Chat() {
                     Kesehatan
                   </span>
                 </div>
-                <p className="text-xs mt-2">
-                  Jawaban didukung oleh penelitian ilmiah terkini
-                </p>
               </div>
             </div>
           ) : (
@@ -794,7 +796,7 @@ export default function Chat() {
         </section>
 
         {/* Mode Switcher */}
-        <div className="mt-3 flex items-center justify-center px-4">
+        <div className="flex py-8 items-center justify-center px-4">
           <div className="flex items-center gap-3 px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-full border border-gray-200 dark:border-gray-700">
             <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
               {useVanillaMode ? "🤖 Vanilla LLM" : "📚 RAG Mode"}
@@ -813,14 +815,14 @@ export default function Chat() {
               />
             </button>
             <span className="text-xs text-gray-600 dark:text-gray-400">
-              {useVanillaMode ? "Off RAG" : "With RAG"}
+              {useVanillaMode ? "Tanpa Pencarian" : "Dengan Pencarian Ilmiah"}
             </span>
           </div>
         </div>
 
         <form
           onSubmit={handleSubmit}
-          className="mt-3 flex items-center border border-gray-200 gap-2 sticky bottom-6 p-4 bg-white rounded-full"
+          className="flex items-center border border-gray-200 gap-2  sticky bottom-6 left-0 right-0 p-4 bg-white rounded-full"
           aria-label="Form input pertanyaan"
         >
           <input

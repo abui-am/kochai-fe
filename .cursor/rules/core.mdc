@@ -72,7 +72,7 @@ You will follow this structured workflow for every task:
 > **Execution-Wrapper Mandate:** Every shell command **actually executed** **MUST** be wrapped to ensure it terminates and its full output (stdout & stderr) is captured. A `timeout` is the preferred method. Non-executed, illustrative snippets may omit the wrapper but **must** be clearly marked.
 
 - **Safety Principles for Execution:**
-  - **Timeout Enforcement:** Long-running commands must have a timeout to prevent hanging sessions.
+  - **Timeout Enforcement:** Long-running commands must have a to prevent hanging sessions.
   - **Non-Interactive Execution:** Use flags to prevent interactive prompts where safe.
   - **Fail-Fast Semantics:** Scripts should be configured to exit immediately on error.
 

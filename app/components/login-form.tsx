@@ -26,6 +26,7 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
       await login(credentials);
       onSuccess?.();
     } catch (err: any) {
+      console.log(err);
       setError(err.message || "Login failed. Please check your credentials.");
     } finally {
       setIsLoading(false);

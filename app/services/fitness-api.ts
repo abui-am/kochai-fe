@@ -198,7 +198,7 @@ export interface ValidationError {
 }
 
 export interface HTTPValidationError {
-  detail?: ValidationError[];
+  detail?: string;
 }
 
 interface RequestOptions {
@@ -258,12 +258,15 @@ async function requestJson<T>(
     const isJson = contentType.includes("application/json");
 
     if (!response.ok) {
-      let errorBody: unknown = undefined;
+      let errorBody: HTTPValidationError | undefined = undefined;
       try {
         errorBody = isJson ? await response.json() : await response.text();
       } catch {}
-      const message = `Request failed with status ${response.status}`;
-      throw new ApiError(message, response.status, errorBody as T);
+      throw new ApiError(
+        errorBody?.detail || "Unknown error",
+        response.status,
+        errorBody as T
+      );
     }
 
     if (response.status === 204) return undefined as unknown as T;
