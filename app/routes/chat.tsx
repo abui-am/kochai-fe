@@ -716,10 +716,7 @@ export default function Chat() {
                     Latihan
                   </span>
                   <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full">
-                    Nutrisi
-                  </span>
-                  <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full">
-                    Pemulihan
+                    Kebugaran
                   </span>
                   <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded-full">
                     Kesehatan
