@@ -26,8 +26,6 @@ export interface UserProfileUpdate {
   name?: string | null;
   picture?: string | null;
   bio?: string | null;
-  location?: string | null;
-  website?: string | null;
 }
 
 export interface UserRegistration {

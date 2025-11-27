@@ -44,8 +44,6 @@ export default function Profile() {
       setProfile({
         name: profileData.user.name,
         bio: "", // Would come from profile data
-        location: "", // Would come from profile data
-        website: "", // Would come from profile data
       });
       if (profileData.preferences) {
         setPreferences(profileData.preferences);
@@ -202,32 +200,6 @@ export default function Profile() {
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
                   placeholder="Ceritakan tentang diri Anda..."
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Lokasi
-                </label>
-                <input
-                  type="text"
-                  value={profile.location || ""}
-                  onChange={handleProfileChange("location")}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                  placeholder="Kota, Negara"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Website
-                </label>
-                <input
-                  type="url"
-                  value={profile.website || ""}
-                  onChange={handleProfileChange("website")}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                  placeholder="https://website.com"
                 />
               </div>
 
