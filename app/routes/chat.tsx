@@ -95,7 +95,7 @@ export default function Chat() {
   // Example chat prompts for users
   const examplePrompts = [
     "Berapa lama durasi latihan yang efektif persesi?",
-    "Kenapa pegal-pegal setelah angkat beban terjadi?",
+    "Kenapa pegal-pegal setelah angkat beban atau DOMS terjadi?",
     "Berapa lama waktu tidur yang baik untuk membentuk otot?",
     "Gerakan apa yang harus dilakukan untuk membentuk otot?",
     "Berapa lama sampai saat saya melihat progres latihan saya?",
@@ -782,7 +782,7 @@ export default function Chat() {
               <div className="text-xs text-gray-500 dark:text-gray-400 mb-2 w-full text-center">
                 Coba tanyakan:
               </div>
-              {examplePrompts.slice(0, 6).map((prompt, index) => (
+              {examplePrompts.map((prompt, index) => (
                 <button
                   key={index}
                   onClick={() => handleExampleClick(prompt)}
