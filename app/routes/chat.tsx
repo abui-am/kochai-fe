@@ -822,7 +822,7 @@ export default function Chat() {
 
         <form
           onSubmit={handleSubmit}
-          className="flex items-center border border-gray-200 gap-2  sticky bottom-6 left-0 right-0 p-4 bg-white rounded-full"
+          className="flex items-center border border-gray-200 dark:border-gray-700 gap-2 sticky bottom-6 left-0 right-0 p-4 bg-white dark:bg-gray-800 rounded-full"
           aria-label="Form input pertanyaan"
         >
           <input
