@@ -702,30 +702,87 @@ export default function Chat() {
   return (
     <ProtectedRoute>
       <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col p-4 scroll-smooth relative">
+        {/* Persistent Info Banner */}
+        <div className="fixed top-16 left-0 right-0 z-10 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800 py-2">
+          <div className="mx-auto max-w-4xl px-4">
+            <div className="flex items-center gap-2 text-xs text-blue-800 dark:text-blue-300">
+              <span className="text-sm">💡</span>
+              <p className="flex-1">
+                <strong>Info:</strong> Sistem ini memberikan respons langsung
+                tanpa menyimpan riwayat. Ajukan pertanyaan spesifik untuk hasil
+                terbaik.
+              </p>
+            </div>
+          </div>
+        </div>
+
         <section
           ref={listRef}
           aria-label="Chat conversation"
-          className="mt-20 flex-1 space-y-3 overflow-y-auto rounded-md border border-gray-200 p-3 dark:border-gray-800"
+          className="mt-28 flex-1 space-y-3 overflow-y-auto rounded-md border border-gray-200 p-3 dark:border-gray-800"
         >
           {messages.length === 0 ? (
             <div className="flex h-full items-center justify-center py-12 text-sm text-gray-500">
-              <div className="text-center space-y-2">
-                <p>Halo {user?.name}! 🤖💪</p>
-                <p>
+              <div className="text-center space-y-4 max-w-2xl mx-auto px-4">
+                <p className="text-base font-semibold text-gray-700 dark:text-gray-300">
+                  Halo {user?.name}! 🤖💪
+                </p>
+                <p className="text-gray-600 dark:text-gray-400">
                   Selamat datang di KochAI, Saya Kochi sebagai pelatih virtual
                   kamu!
                 </p>
-                <p>Tanyakan apa saja tentang:</p>
+                <p className="text-gray-600 dark:text-gray-400">
+                  Tanyakan apa saja tentang:
+                </p>
                 <div className="flex flex-wrap justify-center gap-2 text-xs">
-                  <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
+                  <span className="px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 rounded-full">
                     Latihan
                   </span>
-                  <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full">
+                  <span className="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 rounded-full">
                     Kebugaran
                   </span>
-                  <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded-full">
+                  <span className="px-2 py-1 bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400 rounded-full">
                     Kesehatan
                   </span>
+                </div>
+
+                {/* System Limitation Notice */}
+                <div className="mt-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg text-left space-y-2">
+                  <div className="flex items-start gap-2">
+                    <span className="text-yellow-600 dark:text-yellow-500 text-lg">
+                      ℹ️
+                    </span>
+                    <div className="flex-1 text-xs text-yellow-800 dark:text-yellow-300">
+                      <p className="font-semibold mb-2">
+                        Penting untuk diketahui:
+                      </p>
+                      <ul className="space-y-1.5 list-disc list-inside">
+                        <li>
+                          Sistem ini{" "}
+                          <strong>tidak menyimpan riwayat percakapan</strong> ke
+                          database
+                        </li>
+                        <li>
+                          Berfungsi sebagai{" "}
+                          <strong>alat interaktif berbasis teks</strong> tanpa
+                          integrasi sistem lanjutan
+                        </li>
+                        <li>
+                          Memberikan <strong>respons langsung</strong> terhadap
+                          pertanyaan spesifik, bukan dialog panjang
+                          berkelanjutan
+                        </li>
+                        <li>
+                          Tidak dirancang untuk{" "}
+                          <strong>small talk atau basa-basi</strong>
+                        </li>
+                        <li>
+                          Ajukan pertanyaan langsung dan spesifik untuk hasil
+                          terbaik
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
