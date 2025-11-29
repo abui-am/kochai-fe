@@ -230,6 +230,7 @@ export default function Profile() {
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
                 >
                   <option value="">Pilih tujuan...</option>
+                  <option value="body_building">Membangun badan</option>
                   <option value="muscle_gain">Membangun otot</option>
                   <option value="weight_loss">Menurunkan berat badan</option>
                   <option value="strength">Meningkatkan kekuatan</option>
@@ -250,6 +251,7 @@ export default function Profile() {
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
                 >
                   <option value="">Pilih tingkat...</option>
+                  <option value="never">Tidak Pernah</option>
                   <option value="beginner">Pemula</option>
                   <option value="intermediate">Menengah</option>
                   <option value="advanced">Lanjutan</option>
@@ -266,6 +268,9 @@ export default function Profile() {
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
                 >
                   <option value="">Pilih frekuensi...</option>
+                  <option value="less_than_once_weekly">
+                    Kurang dari 1x per minggu
+                  </option>
                   <option value="1-2_times_per_week">
                     1-2 kali per minggu
                   </option>

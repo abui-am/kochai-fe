@@ -261,6 +261,7 @@ export function OnboardingFlow() {
                   required
                 >
                   <option value="">Pilih tujuan utama...</option>
+                  <option value="body_building">Membangun badan</option>
                   <option value="muscle_gain">Membangun otot</option>
                   <option value="weight_loss">Menurunkan berat badan</option>
                   <option value="strength">Meningkatkan kekuatan</option>
@@ -282,6 +283,7 @@ export function OnboardingFlow() {
                   required
                 >
                   <option value="">Pilih tingkat pengalaman...</option>
+                  <option value="never">Tidak Pernah</option>
                   <option value="beginner">Pemula</option>
                   <option value="intermediate">Menengah</option>
                   <option value="advanced">Lanjutan</option>
@@ -299,6 +301,9 @@ export function OnboardingFlow() {
                   required
                 >
                   <option value="">Pilih frekuensi...</option>
+                  <option value="less_than_once_weekly">
+                    Kurang dari 1x per minggu
+                  </option>
                   <option value="1-2_times_per_week">
                     1-2 kali per minggu
                   </option>
