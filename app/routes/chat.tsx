@@ -925,7 +925,7 @@ export default function Chat() {
             onChange={handleChange}
             placeholder="Ketik pertanyaan..."
             aria-label="Input pesan"
-            className="flex-1 border-gray-200 bg-white px-3 py-2 text-sm outline-none ring-0 placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-800 dark:bg-gray-950"
+            className="flex-1 bg-transparent px-3 py-2 text-sm text-gray-900 dark:text-gray-100 outline-none ring-0 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none"
           />
           <button
             type="submit"
