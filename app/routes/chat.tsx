@@ -40,6 +40,14 @@ export default function Chat() {
   const [useVanillaMode, setUseVanillaMode] = React.useState<boolean>(false);
   const [onboardingCheckDone, setOnboardingCheckDone] =
     React.useState<boolean>(false);
+  const [showInfoBanner, setShowInfoBanner] = React.useState<boolean>(() => {
+    // Check localStorage on initial load
+    if (typeof window !== "undefined") {
+      const bannerClosed = localStorage.getItem("chatInfoBannerClosed");
+      return bannerClosed !== "true";
+    }
+    return true;
+  });
   const listRef = React.useRef<HTMLDivElement | null>(null);
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -212,6 +220,13 @@ export default function Chat() {
       }
       return newSet;
     });
+  };
+
+  const handleCloseBanner = () => {
+    setShowInfoBanner(false);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("chatInfoBannerClosed", "true");
+    }
   };
 
   const renderBotMessage = (message: ChatMessage, messageIndex: number) => {
@@ -702,24 +717,47 @@ export default function Chat() {
   return (
     <ProtectedRoute>
       <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col p-4 scroll-smooth relative">
-        {/* Persistent Info Banner */}
-        <div className="fixed top-16 left-0 right-0 z-10 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800 py-2">
-          <div className="mx-auto max-w-4xl px-4">
-            <div className="flex items-center gap-2 text-xs text-blue-800 dark:text-blue-300">
-              <span className="text-sm">💡</span>
-              <p className="flex-1">
-                <strong>Info:</strong> Sistem ini memberikan respons langsung
-                tanpa menyimpan riwayat. Ajukan pertanyaan spesifik untuk hasil
-                terbaik.
-              </p>
+        {/* Closeable Info Banner */}
+        {showInfoBanner && (
+          <div className="fixed top-16 left-0 right-0 z-10 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800 py-2">
+            <div className="mx-auto max-w-4xl px-4">
+              <div className="flex items-center gap-2 text-xs text-blue-800 dark:text-blue-300">
+                <span className="text-sm">💡</span>
+                <p className="flex-1">
+                  <strong>Info:</strong> Sistem ini memberikan respons langsung
+                  tanpa menyimpan riwayat. Ajukan pertanyaan spesifik untuk
+                  hasil terbaik.
+                </p>
+                <button
+                  onClick={handleCloseBanner}
+                  className="flex-shrink-0 p-1 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded transition-colors"
+                  aria-label="Tutup banner"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         <section
           ref={listRef}
           aria-label="Chat conversation"
-          className="mt-28 flex-1 space-y-3 overflow-y-auto rounded-md border border-gray-200 p-3 dark:border-gray-800"
+          className={`${
+            showInfoBanner ? "mt-28" : "mt-16"
+          } flex-1 space-y-3 overflow-y-auto rounded-md border border-gray-200 p-3 dark:border-gray-800`}
         >
           {messages.length === 0 ? (
             <div className="flex h-full items-center justify-center py-12 text-sm text-gray-500">
