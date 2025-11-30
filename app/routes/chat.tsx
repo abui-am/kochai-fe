@@ -102,14 +102,14 @@ export default function Chat() {
 
   // Example chat prompts for users
   const examplePrompts = [
-    "Berapa lama durasi latihan yang efektif persesi?",
+    "Berapa lama durasi latihan yang disarankan untuk pemula atau atlet berpengalaman",
     "Kenapa pegal-pegal setelah angkat beban atau DOMS terjadi?",
-    "Berapa lama waktu tidur yang baik untuk membentuk otot?",
-    "Gerakan apa yang harus dilakukan untuk membentuk otot?",
-    "Berapa lama sampai saat saya melihat progres latihan saya?",
+    "Berapa lama waktu tidur yang baik untuk pemulihan otot?",
+    "Gerakan yang bagus untuk membentuk otot?",
+    "Berapa lama waktu yang dibutuhkan untuk melihat progres latihan",
 
     "Kenapa latihan kaki itu penting?",
-    "Cara mengobati pegal pegal setelah latihan",
+    "Cara mengobati DOMS atau pegal pegal setelah latihan angkat beban?",
     "Berapa banyak jumlah protein yang perlu dikonsumsi setiap hari?",
     "Kenapa saya harus latihan fisik untuk menjadi bugar?",
     "Kenapa seiring usia kemampuan fisik saya berkurang?",
