@@ -2,6 +2,8 @@
 
 Frontend for **KochAI**, an AI-powered fitness assistant backed by a scientific knowledge base (PaperQA on the API). Users sign in, complete onboarding, and chat with cited answers from research papers.
 
+![KochAI chat interface with scientific references and expandable citations](public/image_6.png)
+
 ## Features
 
 - **RAG chat** — Ask fitness questions; responses include scientific references and expandable citations
