@@ -1,115 +1,111 @@
-# 💪 Fitness Chatbot
+# KochAI
 
-An AI-powered fitness knowledge base chatbot built with React Router, featuring authentication and scientific paper analysis using PaperQA.
+Frontend for **KochAI**, an AI-powered fitness assistant backed by a scientific knowledge base (PaperQA on the API). Users sign in, complete onboarding, and chat with cited answers from research papers.
 
 ## Features
 
-- 🚀 **AI-Powered Responses**: GPT-4 powered fitness advice with scientific citations
-- 🔐 **Complete Authentication**: Login, registration, and user management
-- 📚 **Scientific Sources**: All responses include citations from research papers
-- 🎯 **Personalized Experience**: User profiles and fitness preferences
-- 🛡️ **Protected Routes**: Secure authentication flow with JWT tokens
-- 📱 **Responsive Design**: Mobile-friendly interface with Tailwind CSS
-- ⚡️ **Hot Module Replacement**: Fast development with React Router
-- 🔄 **Type Safety**: Full TypeScript implementation
+- **RAG chat** — Ask fitness questions; responses include scientific references and expandable citations
+- **Vanilla mode** — Optional direct LLM replies without the knowledge base (toggle in chat)
+- **Auth** — Register, login, JWT session in `localStorage`, protected routes
+- **Onboarding** — Profile and fitness preferences before chat access
+- **Profile** — Update account details and preferences
+- **Responsive UI** — Tailwind CSS v4, light/dark-friendly layout
 
-## Tech Stack
+## Tech stack
 
-- **Frontend**: React 19, React Router 7, TypeScript
-- **Styling**: Tailwind CSS with dark mode support
-- **Authentication**: JWT tokens with localStorage management
-- **API**: RESTful API client with comprehensive error handling
-- **Build**: Vite with SSR support
+| Layer | Choice |
+| --- | --- |
+| Framework | React 19, React Router 7 (SSR) |
+| Language | TypeScript |
+| Styling | Tailwind CSS 4 |
+| Build | Vite 6 |
+| API client | `app/services/fitness-api.ts` (OpenAPI-aligned) |
 
-## Getting Started
+## Prerequisites
 
-### Prerequisites
+- **Node.js** 20+ (Dockerfile uses Node 20)
+- **pnpm** recommended (`pnpm-lock.yaml` in repo), or npm
+- **Backend API** — KochAI RAG service (PaperQA); default dev URL `http://localhost:8000`
 
-- Node.js 18+
-- Backend API server running on `http://localhost:8000` (or configure `VITE_API_BASE_URL`)
-
-### Installation
-
-Install the dependencies:
+## Quick start
 
 ```bash
-npm install
+pnpm install
+# create .env with VITE_API_BASE_URL (see Environment)
+pnpm dev
 ```
 
-### Development
+App runs at [http://localhost:5173](http://localhost:5173).
 
-Start the development server with HMR:
+### Environment
+
+Create a `.env` file in the project root:
+
+```env
+VITE_API_BASE_URL=http://localhost:8000
+```
+
+If unset, the client falls back to `http://localhost:8000`. For a deployed API, set this at **build time** (Vite embeds `VITE_*` variables).
+
+## Routes
+
+| Path | Purpose |
+| --- | --- |
+| `/` | Login and registration |
+| `/home` | Landing page; redirects authenticated users to chat or onboarding |
+| `/onboarding` | Profile + fitness preferences (required for new users) |
+| `/chat` | Main chat (protected) |
+| `/profile` | Account and preferences (protected) |
+
+**Typical flow:** `/` → authenticate → `/onboarding` (if incomplete) → `/chat`.
+
+## Scripts
+
+| Command | Description |
+| --- | --- |
+| `pnpm dev` | Dev server with HMR |
+| `pnpm build` | Production build (`build/client`, `build/server`) |
+| `pnpm start` | Serve production build |
+| `pnpm typecheck` | React Router typegen + `tsc` |
+
+## Project layout
+
+```
+app/
+├── components/     # Auth, onboarding, navigation, protected route
+├── contexts/       # AuthContext
+├── routes/         # Route modules (home, chat, profile, …)
+├── services/       # fitness-api.ts — HTTP client for backend
+└── root.tsx        # App shell
+```
+
+API client details, auth flow, and endpoint coverage: **[README-API.md](./README-API.md)**.
+
+## Production build
 
 ```bash
-npm run dev
+pnpm build
+pnpm start
 ```
 
-Your application will be available at `http://localhost:5173`.
+SSR is enabled (`react-router.config.ts`). Deploy the `build/` output and run `react-router-serve` (see `pnpm start`).
 
-### Authentication & Onboarding Flow
-
-1. **Home Page** (`/`): Landing page for new users
-2. **Login/Register** (`/login`): Authentication forms
-3. **Onboarding** (`/onboarding`): Multi-step setup for new users (profile + preferences)
-4. **Chat** (`/chat`): Protected fitness chatbot interface
-5. **Profile** (`/profile`): User settings and preferences
-
-**New User Journey:**
-
-- Visit home page → Login/Register → Complete onboarding → Access chat
-- **Existing User Journey:**
-- Visit home page → Auto-redirect to chat (if onboarding complete) or onboarding
-
-The app automatically handles authentication state and onboarding completion, providing a smooth user experience.
-
-## Building for Production
-
-Create a production build:
+## Docker
 
 ```bash
-npm run build
+docker build -t kochai-fe .
+docker run -p 3000:3000 kochai-fe
 ```
 
-## Deployment
+The image runs `npm run start` on port 3000. Set `VITE_API_BASE_URL` during the image **build** stage if the API URL is not localhost.
 
-### Docker Deployment
+> **Note:** The Dockerfile expects `package-lock.json`. This repo uses pnpm; for Docker builds you may need to generate a lockfile or adjust the Dockerfile to use `pnpm-lock.yaml`.
 
-To build and run using Docker:
+## Related repos
 
-```bash
-docker build -t my-app .
-
-# Run the container
-docker run -p 3000:3000 my-app
-```
-
-The containerized application can be deployed to any platform that supports Docker, including:
-
-- AWS ECS
-- Google Cloud Run
-- Azure Container Apps
-- Digital Ocean App Platform
-- Fly.io
-- Railway
-
-### DIY Deployment
-
-If you're familiar with deploying Node applications, the built-in app server is production-ready.
-
-Make sure to deploy the output of `npm run build`
-
-```
-├── package.json
-├── package-lock.json (or pnpm-lock.yaml, or bun.lockb)
-├── build/
-│   ├── client/    # Static assets
-│   └── server/    # Server-side code
-```
-
-## Styling
-
-This template comes with [Tailwind CSS](https://tailwindcss.com/) already configured for a simple default starting experience. You can use whatever CSS framework you prefer.
+- **This repo:** `kochai-fe` — web UI
+- **Backend / RAG API:** configure via `VITE_API_BASE_URL`
 
 ---
 
-Built with ❤️ using React Router.
+Built with React Router 7.
